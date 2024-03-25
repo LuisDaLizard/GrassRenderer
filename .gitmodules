@@ -1,6 +1,7 @@
 [submodule "libs/ShlibGraphics"]
 	path = libs/ShlibGraphics
 	url = https://github.com/LuisDaLizard/ShlibGraphics.git
+	branch = master
 [submodule "libs/imgui"]
 	path = libs/imgui
 	url = https://github.com/ocornut/imgui.git
