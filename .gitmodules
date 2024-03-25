@@ -1,0 +1,3 @@
+[submodule "libs/ShlibGraphics"]
+	path = libs/ShlibGraphics
+	url = https://github.com/LuisDaLizard/ShlibGraphics.git
