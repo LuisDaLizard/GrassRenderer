@@ -1,4 +1,3 @@
-#include <iostream>
 #include <ShlibGraphics.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -7,7 +6,7 @@
 Window gWindow;
 
 void InitWindow();
-void InitIMGUI();
+void InitImGui();
 
 void UpdateGUI();
 void DrawGUI();
@@ -15,7 +14,7 @@ void DrawGUI();
 int main()
 {
     InitWindow();
-    InitIMGUI();
+    InitImGui();
 
     while(!WindowShouldClose(gWindow))
     {
@@ -23,14 +22,12 @@ int main()
 
         UpdateGUI();
 
-        WindowClear();
+        GLClear();
 
         DrawGUI();
 
         WindowSwapBuffers(gWindow);
     }
-
-
 
     return 0;
 }
@@ -48,13 +45,16 @@ void InitWindow()
         WriteError(1, "Unable to create window!");
 }
 
-void InitIMGUI()
+void InitImGui()
 {
     ImGui::CreateContext();
     ImGui::StyleColorsLight();
+
     ImGuiIO &io = ImGui::GetIO();
     io.ConfigWindowsMoveFromTitleBarOnly = true;
-    ImGuiStyle &style = ImGui::GetStyle();
+    io.IniFilename = nullptr;
+    io.LogFilename = nullptr;
+
     ImGui_ImplGlfw_InitForOpenGL((GLFWwindow *)gWindow->pHandle, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 }
