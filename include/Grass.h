@@ -9,12 +9,16 @@
 
 #include <ShlibGraphics/ShlibGraphics.h>
 #include <random>
+#include <mutex>
+#include <thread>
 
 struct GrassBlade
 {
     Vec3 v0;
     Vec3 v1;
     Vec3 v2;
+
+    int patch;
 };
 
 class Grass
@@ -24,25 +28,37 @@ private:
     {
         Vec3 position;
         Vec3 normal;
+        float patch;
     };
 
 private:
     Mesh mGrassMesh = nullptr;
+    Program mGrassShader = nullptr;
+    UniformBuffer mColorBuffer = nullptr;
     GrassBlade *mGrassBlades = nullptr;
-    int mNumBlades, mPatchSize;
+    Vec4 *mPatchColors = nullptr;
+    int mNumBlades, mPatchSize, mNumPatches;
 
     MeshCreateInfo mGrassCreateInfo;
     std::default_random_engine mGenerator;
 
+    std::thread mGenerationThread;
+    std::mutex mColorBufferMutex, mGrassMeshMutex;
+    bool mDoneGenerating = true;
+
+    void GenerationThread(Model *pModel);
     void GenerateBlades(Model *pModel);
     void GeneratePatches();
+    void GenerateMesh();
 public:
     Grass();
     ~Grass();
 
     void Generate(Model *pModel, int numBlades, int patchSize);
+    void FinishGeneration();
+    void Draw(Matrix projection, Matrix view, float height, bool showPatches);
 
-    void Draw();
+    bool DoneGenerating();
 };
 
 #endif //GRASSRENDERER_GRASS_H

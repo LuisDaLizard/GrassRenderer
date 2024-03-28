@@ -15,25 +15,26 @@ void Application::Run()
     InitPrograms();
     InitModels();
 
+    double start = GetTime();
+    double end = start;
+
     while(!WindowShouldClose(mWindow))
     {
+        mDeltaTime = end - start;
+        start = GetTime();
+
         WindowPollEvents(mWindow);
 
         UpdateGui();
         UpdateCamera();
 
         GLClear();
-
-        ProgramUse(mGrassShader);
-        ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uWorld"), MatrixIdentity());
-        ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uView"), mCameraView);
-        ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uProjection"), mCameraProjection);
-        ProgramUploadFloat(mGrassShader, ProgramUniformLocation(mGrassShader, "uHeight"), mBladeHeight);
-        mGrass.Draw();
+        mGrass->Draw(mCameraProjection, mCameraView, mBladeHeight, mShowPatches);
 
         DrawGui();
 
         WindowSwapBuffers(mWindow);
+        end = GetTime();
     }
 
     Cleanup();
@@ -68,17 +69,11 @@ void Application::InitGui()
 
 void Application::InitPrograms()
 {
-    ProgramCreateInfo grassShader = {};
-    grassShader.pVertexSource = FileReadText("shaders/Grass.vert");
-    grassShader.pGeometrySource = FileReadText("shaders/Grass.geom");
-    grassShader.pFragmentSource = FileReadText("shaders/Grass.frag");
-
-    if (!ProgramCreate(&grassShader, &mGrassShader))
-        WriteError(1, "Unable to create grass shader");
 }
 
 void Application::InitModels()
 {
+    mGrass = new Grass();
     mModel = new Model(Meshes::PlaneMesh, 2);
 }
 
@@ -87,6 +82,11 @@ void Application::UpdateGui()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+
+    if (mGrass->DoneGenerating())
+        mGrass->FinishGeneration();
+    else
+        mGenerationTime += mDeltaTime;
 
     {
         ImGui::SetNextWindowPos({10, 10});
@@ -110,12 +110,18 @@ void Application::UpdateGui()
                 mNumBlades = 32;
 
             if (ImGui::Button("Generate"))
-                mGrass.Generate(mModel, mNumBlades, mPatchSize);
+            {
+                mGrass->Generate(mModel, mNumBlades, mPatchSize);
+                mGenerationTime = 0;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.4fs", mGenerationTime);
         }
 
         if (ImGui::CollapsingHeader("Grass Variables"))
         {
             ImGui::SliderFloat("Height", &mBladeHeight, 0.01f, 1.0f);
+            ImGui::Checkbox("Show Patches", &mShowPatches);
         }
 
         ImVec2 size = ImGui::GetWindowSize();
