@@ -37,10 +37,10 @@ private:
     void GenerateBlades(Model *pModel);
     void GeneratePatches();
 public:
-    Grass(int patchSize = 32);
+    Grass();
     ~Grass();
 
-    void Generate(Model *pModel, int numBlades);
+    void Generate(Model *pModel, int numBlades, int patchSize);
 
     void Draw();
 };

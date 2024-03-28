@@ -3,8 +3,8 @@
 //
 #include "Grass.h"
 
-Grass::Grass(int patchSize)
-    : mGenerator(std::random_device{}()), mGrassCreateInfo({}), mPatchSize(patchSize), mNumBlades(0)
+Grass::Grass()
+    : mGenerator(std::random_device{}()), mGrassCreateInfo({}), mNumBlades(0)
 {
     mGrassCreateInfo.topology = TOPOLOGY_POINTS;
     mGrassCreateInfo.stride = sizeof(GrassBladeVertex);
@@ -17,11 +17,12 @@ Grass::~Grass()
     delete[] mGrassBlades;
 }
 
-void Grass::Generate(Model *pModel, int numBlades)
+void Grass::Generate(Model *pModel, int numBlades, int patchSize)
 {
     if (!pModel || !numBlades)
         return;
 
+    mPatchSize = patchSize;
     mNumBlades = numBlades;
 
     if (mNumBlades % mPatchSize != 0)

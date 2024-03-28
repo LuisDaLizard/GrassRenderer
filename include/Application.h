@@ -21,6 +21,7 @@ private:
     // Grass Related Variables
     Grass mGrass;
     Program mGrassShader;
+    int mPatchSize = 32;
     int mNumBlades = 0;
     float mBladeHeight = 0.5f;
 

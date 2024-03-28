@@ -95,10 +95,22 @@ void Application::UpdateGui()
 
         if (ImGui::CollapsingHeader("Grass Generation"))
         {
-            ImGui::SliderInt("Blades", &mNumBlades, 0, 10000);
+            ImGui::InputInt("Patch Size", &mPatchSize, 32, 32);
+
+            if (mPatchSize % 32 != 0)
+                mPatchSize += 32 - (mPatchSize % 32);
+            if (mPatchSize <= 0)
+                mPatchSize = 32;
+
+            ImGui::InputInt("Number of blades", &mNumBlades, mPatchSize, mPatchSize);
+
+            if (mNumBlades % mPatchSize != 0)
+                mNumBlades += mPatchSize - (mNumBlades % mPatchSize);
+            if (mNumBlades <= 0)
+                mNumBlades = 32;
 
             if (ImGui::Button("Generate"))
-                mGrass.Generate(mModel, mNumBlades);
+                mGrass.Generate(mModel, mNumBlades, mPatchSize);
         }
 
         if (ImGui::CollapsingHeader("Grass Variables"))
