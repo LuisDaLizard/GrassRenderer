@@ -19,8 +19,8 @@ void Application::Run()
     {
         WindowPollEvents(mWindow);
 
-        UpdateCamera();
         UpdateGui();
+        UpdateCamera();
 
         GLClear();
 
@@ -118,6 +118,14 @@ void Application::UpdateGui()
             ImGui::SliderFloat("Height", &mBladeHeight, 0.01f, 1.0f);
         }
 
+        ImVec2 size = ImGui::GetWindowSize();
+        mGrassGenerationWindowSize.x = size.x;
+        mGrassGenerationWindowSize.y = size.y;
+
+        ImVec2 pos = ImGui::GetWindowPos();
+        mGrassGenerationWindowPos.x = pos.x;
+        mGrassGenerationWindowPos.y = pos.y;
+
         ImGui::End();
     }
 
@@ -133,6 +141,10 @@ void Application::UpdateCamera()
 {
     mPrevMouse = mMouse;
     WindowGetMousePos(mWindow, &mMouse.x, &mMouse.y);
+
+    if (mMouse.x >= mGrassGenerationWindowPos.x && mMouse.x <= mGrassGenerationWindowPos.x + mGrassGenerationWindowSize.x &&
+        mMouse.y >= mGrassGenerationWindowPos.y && mMouse.y <= mGrassGenerationWindowPos.y + mGrassGenerationWindowSize.y)
+        return;
 
     if (WindowIsMouseButtonDown(mWindow, MOUSE_LEFT))
     {

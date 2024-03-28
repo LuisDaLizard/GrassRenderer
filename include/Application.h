@@ -30,7 +30,7 @@ private:
     float mZoomSensitivity = 0.01f;
     float mCameraYaw = 0, mCameraPitch = 0;
     float mCameraRadius = 5;
-    Vec2 mMouse, mPrevMouse;
+    Vec2 mMouse, mPrevMouse, mGrassGenerationWindowSize, mGrassGenerationWindowPos;
     Vec3 mCameraPos = {0, 0, 0}, mCameraTarget = {0, 0, 0};
     Matrix mCameraProjection, mCameraView;
 
