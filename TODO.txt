@@ -1,0 +1,4 @@
+List of needed changes:
+    - Generate tufts of grass using Poisson-disc sampling
+    - Update uniform grass blade generation to take triangle area into account when
+    - Generate patches of close grass blades
