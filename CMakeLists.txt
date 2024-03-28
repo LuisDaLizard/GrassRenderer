@@ -7,14 +7,15 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
         src/Application.cpp
+        src/Grass.cpp
+        src/Model.cpp
 
         libs/imgui/imgui.cpp
         libs/imgui/imgui_draw.cpp
         libs/imgui/imgui_tables.cpp
         libs/imgui/imgui_widgets.cpp
         libs/imgui/backends/imgui_impl_glfw.cpp
-        libs/imgui/backends/imgui_impl_opengl3.cpp
-        )
+        libs/imgui/backends/imgui_impl_opengl3.cpp)
 
 set(INCLUDES
         include/
@@ -30,3 +31,5 @@ set(LIBS
 add_executable(${PROJECT_NAME} main.cpp ${SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDES})
 target_link_libraries(${PROJECT_NAME} ${LIBS})
+
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/res/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug)

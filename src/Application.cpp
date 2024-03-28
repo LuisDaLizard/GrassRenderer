@@ -12,14 +12,24 @@ void Application::Run()
 {
     InitWindow();
     InitGui();
+    InitPrograms();
+    InitModels();
 
     while(!WindowShouldClose(mWindow))
     {
         WindowPollEvents(mWindow);
 
+        UpdateCamera();
         UpdateGui();
 
         GLClear();
+
+        ProgramUse(mGrassShader);
+        ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uWorld"), MatrixIdentity());
+        ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uView"), mCameraView);
+        ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uProjection"), mCameraProjection);
+        ProgramUploadFloat(mGrassShader, ProgramUniformLocation(mGrassShader, "uHeight"), mBladeHeight);
+        mGrass.Draw();
 
         DrawGui();
 
@@ -56,6 +66,22 @@ void Application::InitGui()
     ImGui_ImplOpenGL3_Init("#version 330");
 }
 
+void Application::InitPrograms()
+{
+    ProgramCreateInfo grassShader = {};
+    grassShader.pVertexSource = FileReadText("shaders/Grass.vert");
+    grassShader.pGeometrySource = FileReadText("shaders/Grass.geom");
+    grassShader.pFragmentSource = FileReadText("shaders/Grass.frag");
+
+    if (!ProgramCreate(&grassShader, &mGrassShader))
+        WriteError(1, "Unable to create grass shader");
+}
+
+void Application::InitModels()
+{
+    mModel = new Model(Meshes::PlaneMesh, 2);
+}
+
 void Application::UpdateGui()
 {
     ImGui_ImplOpenGL3_NewFrame();
@@ -63,9 +89,22 @@ void Application::UpdateGui()
     ImGui::NewFrame();
 
     {
-        ImGui::Begin("Hello World!");
+        ImGui::SetNextWindowPos({10, 10});
+        ImGui::SetNextWindowSize({0, 0}, 0);
+        ImGui::Begin("Grass Editor");
 
-        ImGui::Text("This is some useful text.");
+        if (ImGui::CollapsingHeader("Grass Generation"))
+        {
+            ImGui::SliderInt("Blades", &mNumBlades, 0, 10000);
+
+            if (ImGui::Button("Generate"))
+                mGrass.Generate(mModel, mNumBlades);
+        }
+
+        if (ImGui::CollapsingHeader("Grass Variables"))
+        {
+            ImGui::SliderFloat("Height", &mBladeHeight, 0.01f, 1.0f);
+        }
 
         ImGui::End();
     }
@@ -76,6 +115,38 @@ void Application::UpdateGui()
 void Application::DrawGui()
 {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void Application::UpdateCamera()
+{
+    mPrevMouse = mMouse;
+    WindowGetMousePos(mWindow, &mMouse.x, &mMouse.y);
+
+    if (WindowIsMouseButtonDown(mWindow, MOUSE_LEFT))
+    {
+        Vec2 mouseDelta;
+        mouseDelta.x = mMouse.x - mPrevMouse.x;
+        mouseDelta.y = mMouse.y - mPrevMouse.y;
+
+        mCameraYaw -= mouseDelta.x * mCameraSensitivity;
+        mCameraPitch += mouseDelta.y * mCameraSensitivity;
+        mCameraPitch = CLAMP(-89.0f, mCameraPitch, 89.0f);
+    }
+
+    if (WindowIsMouseButtonDown(mWindow, MOUSE_RIGHT))
+    {
+        float mouseYDelta = mMouse.y - mPrevMouse.y;
+
+        mCameraRadius += (float)(mouseYDelta * mZoomSensitivity);
+        mCameraRadius = MAX(mCameraRadius, 0.01f);
+    }
+
+    mCameraPos.x = sinf(mCameraYaw * DEG2RADF) * cosf(mCameraPitch * DEG2RADF) * mCameraRadius;
+    mCameraPos.y = sinf(mCameraPitch * DEG2RADF) * mCameraRadius + mCameraTarget.y;
+    mCameraPos.z = cosf(mCameraYaw * DEG2RADF) * cosf(mCameraPitch * DEG2RADF) * mCameraRadius;
+
+    mCameraView = MatrixLookAt(mCameraPos, mCameraTarget, {0, 1, 0});
+    mCameraProjection = MatrixPerspective((float)mWindow->width / (float)mWindow->height, 45, 0.01f, 1000.0f);
 }
 
 void Application::Cleanup()
