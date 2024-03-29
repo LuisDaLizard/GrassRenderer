@@ -102,9 +102,11 @@ void Grass::GenerateBlades(Model *pModel)
 
         float rootR1 = sqrtf(r1);
 
-        blades[i].v0.x = (1 - rootR1) * rTriangle.a.position.x + (rootR1 * (1 - r2)) * rTriangle.b.position.x + (rootR1 * r2) * rTriangle.c.position.x;
-        blades[i].v0.y = (1 - rootR1) * rTriangle.a.position.y + (rootR1 * (1 - r2)) * rTriangle.b.position.y + (rootR1 * r2) * rTriangle.c.position.y;
-        blades[i].v0.z = (1 - rootR1) * rTriangle.a.position.z + (rootR1 * (1 - r2)) * rTriangle.b.position.z + (rootR1 * r2) * rTriangle.c.position.z;
+        blades[i].pos.x = (1 - rootR1) * rTriangle.a.position.x + (rootR1 * (1 - r2)) * rTriangle.b.position.x + (rootR1 * r2) * rTriangle.c.position.x;
+        blades[i].pos.y = (1 - rootR1) * rTriangle.a.position.y + (rootR1 * (1 - r2)) * rTriangle.b.position.y + (rootR1 * r2) * rTriangle.c.position.y;
+        blades[i].pos.z = (1 - rootR1) * rTriangle.a.position.z + (rootR1 * (1 - r2)) * rTriangle.b.position.z + (rootR1 * r2) * rTriangle.c.position.z;
+
+        blades[i].norm = rTriangle.a.normal;
 
         blades[i].patch = 0;
     }
@@ -147,7 +149,7 @@ void Grass::GeneratePatches()
         {
             if (!mGrassBlades[j].patch)
             {
-                startPoint = mGrassBlades[j].v0;
+                startPoint = mGrassBlades[j].pos;
                 mGrassBlades[j].patch = i;
                 break;
             }
@@ -162,7 +164,7 @@ void Grass::GeneratePatches()
                 if (mGrassBlades[k].patch)
                     continue;
 
-                float distance = Vec3Magnitude(Vec3Sub(mGrassBlades[k].v0, startPoint));
+                float distance = Vec3Magnitude(Vec3Sub(mGrassBlades[k].pos, startPoint));
 
                 if (distance < smallestDistance)
                 {
@@ -182,8 +184,8 @@ void Grass::GenerateMesh()
 
     for (int i = 0; i < mNumBlades; i++)
     {
-        vertices[i].position = mGrassBlades[i].v0;
-        vertices[i].normal = {0, 1, 0};
+        vertices[i].position = mGrassBlades[i].pos;
+        vertices[i].normal = mGrassBlades[i].norm;
         vertices[i].patch = mGrassBlades[i].patch;
 
         mGrassCreateInfo.numVertices = mNumBlades;
@@ -212,6 +214,4 @@ void Grass::GenerateMesh()
         WriteError(1, "Unable to create uniform buffer");
 
     UniformBufferBindToProgram(mColorBuffer, mGrassShader, "Colors", 0);
-
-
 }

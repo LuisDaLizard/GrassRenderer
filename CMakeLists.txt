@@ -22,6 +22,7 @@ set(INCLUDES
         libs/ShlibGraphics/include/
         libs/imgui/
         libs/imgui/backends/
+        libs/OBJ-Loader/Source/
         )
 
 set(LIBS

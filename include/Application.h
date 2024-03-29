@@ -14,6 +14,7 @@ class Application
 private:
     Window mWindow;
     Model *mModel;
+    Program mModelShader;
     double mDeltaTime;
 
     // Grass Related Variables
@@ -30,7 +31,7 @@ private:
     float mCameraRadius = 5;
     double mGenerationTime = 0;
     Vec2 mMouse, mPrevMouse, mGrassGenerationWindowSize, mGrassGenerationWindowPos;
-    Vec3 mCameraPos = {0, 0, 0}, mCameraTarget = {0, 0, 0};
+    Vec3 mCameraPos = {0, 0, 0}, mCameraTarget = {0, 0, 0}, mLightPos = {0, 100, 100};
     Matrix mCameraProjection, mCameraView;
 
     void InitWindow();

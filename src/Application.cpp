@@ -31,6 +31,13 @@ void Application::Run()
         GLClear();
         mGrass->Draw(mCameraProjection, mCameraView, mBladeHeight, mShowPatches);
 
+        ProgramUse(mModelShader);
+        ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uProjection"), mCameraProjection);
+        ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uView"), mCameraView);
+        ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uWorld"), MatrixIdentity());
+        ProgramUploadVec3(mModelShader, ProgramUniformLocation(mModelShader, "uLightPos"), mLightPos);
+        mModel->Draw();
+
         DrawGui();
 
         WindowSwapBuffers(mWindow);
@@ -69,6 +76,12 @@ void Application::InitGui()
 
 void Application::InitPrograms()
 {
+    ProgramCreateInfo createInfo = {};
+    createInfo.pVertexSource = FileReadText("shaders/Model.vert");
+    createInfo.pFragmentSource = FileReadText("shaders/Model.frag");
+
+    if (!ProgramCreate(&createInfo, &mModelShader))
+        WriteError(1, "Unable to load model shader");
 }
 
 void Application::InitModels()

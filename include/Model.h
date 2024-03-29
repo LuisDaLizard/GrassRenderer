@@ -10,6 +10,7 @@
 struct Vertex
 {
     Vec3 position;
+    Vec3 normal;
 };
 
 struct Triangle
@@ -22,15 +23,20 @@ struct Triangle
 class Model
 {
 private:
+    Mesh mMesh;
     Triangle *mTriangles;
     int mNumTriangles;
 
+    bool GenerateMesh();
 public:
+    explicit Model(const char *pFilename);
     Model(const Triangle *pTriangles, int numTriangles);
     ~Model();
 
     Triangle GetTriangle(int index) const;
     int NumTriangles() const;
+
+    void Draw() const;
 };
 
 namespace Meshes
