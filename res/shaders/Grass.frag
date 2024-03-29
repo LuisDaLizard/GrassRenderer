@@ -12,19 +12,18 @@ layout (std140) uniform Colors
 uniform bool uShowPatches;
 uniform int uNumPatches;
 
-in float fPatch;
-in float fHeight;
+flat in float tcPatch;
 
 void main()
 {
 
     if (uShowPatches)
     {
-        int patchIndex = int(floor(fPatch));
+        int patchIndex = int(floor(tcPatch));
         oColor = uColors[patchIndex];
     }
     else
     {
-        oColor = fHeight * vec4(0, 1, 0, 1);
+        oColor = vec4(1, 1, 1, 1);
     }
 }

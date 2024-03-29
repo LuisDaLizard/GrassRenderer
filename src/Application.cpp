@@ -36,7 +36,7 @@ void Application::Run()
         ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uView"), mCameraView);
         ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uWorld"), MatrixIdentity());
         ProgramUploadVec3(mModelShader, ProgramUniformLocation(mModelShader, "uLightPos"), mLightPos);
-        mModel->Draw();
+        //mModel->Draw();
 
         DrawGui();
 

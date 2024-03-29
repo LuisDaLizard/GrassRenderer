@@ -8,14 +8,16 @@
 Grass::Grass()
     : mGenerator(std::random_device{}()), mGrassCreateInfo({}), mNumBlades(0), mPatchSize(0), mGenerationThread()
 {
-    mGrassCreateInfo.topology = TOPOLOGY_POINTS;
+    mGrassCreateInfo.topology = TOPOLOGY_PATCHES;
+    mGrassCreateInfo.patchSize = 1;
     mGrassCreateInfo.stride = sizeof(GrassBladeVertex);
     mGrassCreateInfo.numAttributes = 3;
     mGrassCreateInfo.pAttributeComponents = new int[] {3, 3, 1};
 
     ProgramCreateInfo grassShader = {};
     grassShader.pVertexSource = FileReadText("shaders/Grass.vert");
-    grassShader.pGeometrySource = FileReadText("shaders/Grass.geom");
+    grassShader.pTessControlSource = FileReadText("shaders/Grass.tesc");
+    grassShader.pTessEvaluationSource = FileReadText("shaders/Grass.tese");
     grassShader.pFragmentSource = FileReadText("shaders/Grass.frag");
 
     if (!ProgramCreate(&grassShader, &mGrassShader))

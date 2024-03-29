@@ -1,6 +1,6 @@
 #version 400 core
 
-layout(points) in;
+layout(triangles) in;
 layout(line_strip, max_vertices = 2) out;
 
 in float gPatch[];

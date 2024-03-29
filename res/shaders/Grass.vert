@@ -6,12 +6,17 @@ layout (location = 2) in float aPatch;
 
 uniform float uHeight;
 
-out float gPatch;
-out vec3 gNormal;
+flat out float cPatch;
+flat out vec4 cBladeDir;
+flat out vec4 cUpDir;
+flat out vec4 cV2;
 
 void main()
 {
-    gPatch = aPatch;
-    gNormal = aPosition + uHeight * aNormal;
+    cPatch = aPatch;
+    cUpDir = vec4(aNormal, 0);
+    cBladeDir = vec4(1, 0, 0, 0);
+    cV2 = vec4(aPosition, 1) + uHeight * cUpDir;
+
     gl_Position = vec4(aPosition, 1);
 }
