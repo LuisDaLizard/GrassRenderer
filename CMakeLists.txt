@@ -9,7 +9,6 @@ set(SOURCES
         src/Application.cpp
         src/Grass.cpp
         src/Model.cpp
-        src/Utilities.cpp
 
         libs/imgui/imgui.cpp
         libs/imgui/imgui_draw.cpp
