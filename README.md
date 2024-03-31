@@ -2,7 +2,7 @@
 ### Made By Luis Tadeo Sanchez
 
 ## About
-This project is an implementation of the paper, Responsive real-time grass rendering for general 3D scenes by Jahrmann & Wimmer.
+This project is an implementation of the paper, [Responsive real-time grass rendering for general 3D scenes](https://dl.acm.org/doi/10.1145/3023368.3023380) by Jahrmann & Wimmer.
 
 ## Build
 To build this project, you will need CMake for setting up the build. Clone the project and all of its subdirectories:
