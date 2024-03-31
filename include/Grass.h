@@ -16,6 +16,7 @@ struct GrassBlade
 {
     Vec3 pos;
     Vec3 norm;
+    Vec3 dir;
 
     int patch;
 };
@@ -27,6 +28,7 @@ private:
     {
         Vec3 position;
         Vec3 normal;
+        Vec3 direction;
         float patch;
     };
 
@@ -55,7 +57,7 @@ public:
 
     void Generate(Model *pModel, int numBlades, int patchSize);
     void FinishGeneration();
-    void Draw(Matrix projection, Matrix view, float height, bool showPatches);
+    void Draw(Matrix projection, Matrix view, float height, float width, bool showPatches);
 
     bool DoneGenerating();
 };

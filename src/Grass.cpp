@@ -11,8 +11,8 @@ Grass::Grass()
     mGrassCreateInfo.topology = TOPOLOGY_PATCHES;
     mGrassCreateInfo.patchSize = 1;
     mGrassCreateInfo.stride = sizeof(GrassBladeVertex);
-    mGrassCreateInfo.numAttributes = 3;
-    mGrassCreateInfo.pAttributeComponents = new int[] {3, 3, 1};
+    mGrassCreateInfo.numAttributes = 4;
+    mGrassCreateInfo.pAttributeComponents = new int[] {3, 3, 3, 1};
 
     ProgramCreateInfo grassShader = {};
     grassShader.pVertexSource = FileReadText("shaders/Grass.vert");
@@ -57,7 +57,7 @@ void Grass::FinishGeneration()
     GenerateMesh();
 }
 
-void Grass::Draw(Matrix projection, Matrix view, float height, bool showPatches)
+void Grass::Draw(Matrix projection, Matrix view, float height, float width, bool showPatches)
 {
     if (!mGrassMesh)
         return;
@@ -67,6 +67,7 @@ void Grass::Draw(Matrix projection, Matrix view, float height, bool showPatches)
     ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uView"), view);
     ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uProjection"), projection);
     ProgramUploadFloat(mGrassShader, ProgramUniformLocation(mGrassShader, "uHeight"), height);
+    ProgramUploadFloat(mGrassShader, ProgramUniformLocation(mGrassShader, "uWidth"), width);
     ProgramUploadBool(mGrassShader, ProgramUniformLocation(mGrassShader, "uShowPatches"), showPatches);
     UniformBufferBind(mColorBuffer, 0);
     MeshDraw(mGrassMesh);
@@ -93,6 +94,7 @@ void Grass::GenerateBlades(Model *pModel)
 
     std::uniform_real_distribution<float> indexDistribution(0, (float)triangles);
     std::uniform_real_distribution<float> positionDistribution(0, 1);
+    std::uniform_real_distribution<float> directionGen(-1, 1);
 
     for (int i = 0; i < mNumBlades; i++)
     {
@@ -109,6 +111,12 @@ void Grass::GenerateBlades(Model *pModel)
         blades[i].pos.z = (1 - rootR1) * rTriangle.a.position.z + (rootR1 * (1 - r2)) * rTriangle.b.position.z + (rootR1 * r2) * rTriangle.c.position.z;
 
         blades[i].norm = rTriangle.a.normal;
+
+        blades[i].dir.x = directionGen(mGenerator);
+        blades[i].dir.y = 0;
+        blades[i].dir.z = directionGen(mGenerator);
+
+        blades[i].dir = Vec3Normalize(blades[i].dir);
 
         blades[i].patch = 0;
     }
@@ -188,7 +196,8 @@ void Grass::GenerateMesh()
     {
         vertices[i].position = mGrassBlades[i].pos;
         vertices[i].normal = mGrassBlades[i].norm;
-        vertices[i].patch = mGrassBlades[i].patch;
+        vertices[i].direction = mGrassBlades[i].dir;
+        vertices[i].patch = (float)mGrassBlades[i].patch;
 
         mGrassCreateInfo.numVertices = mNumBlades;
         mGrassCreateInfo.pVertexData = (float *)vertices;

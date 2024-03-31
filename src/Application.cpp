@@ -29,14 +29,14 @@ void Application::Run()
         UpdateCamera();
 
         GLClear();
-        mGrass->Draw(mCameraProjection, mCameraView, mBladeHeight, mShowPatches);
+        mGrass->Draw(mCameraProjection, mCameraView, mBladeHeight, mBladeWidth, mShowPatches);
 
         ProgramUse(mModelShader);
         ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uProjection"), mCameraProjection);
         ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uView"), mCameraView);
         ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uWorld"), MatrixIdentity());
         ProgramUploadVec3(mModelShader, ProgramUniformLocation(mModelShader, "uLightPos"), mLightPos);
-        //mModel->Draw();
+        mModel->Draw();
 
         DrawGui();
 
@@ -51,7 +51,7 @@ void Application::InitWindow()
 {
     WindowCreateInfo createInfo = {  };
     createInfo.glVersionMajor = 4;
-    createInfo.glVersionMinor = 0;
+    createInfo.glVersionMinor = 6;
     createInfo.width = 800;
     createInfo.height = 600;
     createInfo.pTitle = "Grass Renderer";
@@ -88,6 +88,7 @@ void Application::InitModels()
 {
     mGrass = new Grass();
     mModel = new Model(Meshes::PlaneMesh, 2);
+    //mModel = new Model("models/terrain/terrain.obj");
 }
 
 void Application::UpdateGui()
@@ -133,7 +134,8 @@ void Application::UpdateGui()
 
         if (ImGui::CollapsingHeader("Grass Variables"))
         {
-            ImGui::SliderFloat("Height", &mBladeHeight, 0.01f, 1.0f);
+            ImGui::SliderFloat("Height", &mBladeHeight, 0.01f, 2.0f);
+            ImGui::SliderFloat("Width", &mBladeWidth, 0.01f, 1.0f);
             ImGui::Checkbox("Show Patches", &mShowPatches);
         }
 

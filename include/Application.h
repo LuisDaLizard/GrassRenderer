@@ -22,12 +22,13 @@ private:
     int mPatchSize = 32;
     int mNumBlades = 0;
     float mBladeHeight = 0.5f;
+    float mBladeWidth = 0.25f;
     bool mShowPatches = false;
 
     // Camera Related Variables
     float mCameraSensitivity = 0.1f;
     float mZoomSensitivity = 0.01f;
-    float mCameraYaw = 0, mCameraPitch = 0;
+    float mCameraYaw = 0, mCameraPitch = 10;
     float mCameraRadius = 5;
     double mGenerationTime = 0;
     Vec2 mMouse, mPrevMouse, mGrassGenerationWindowSize, mGrassGenerationWindowPos;
