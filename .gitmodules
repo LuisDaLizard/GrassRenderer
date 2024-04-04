@@ -1,9 +1,0 @@
-[submodule "libs/imgui"]
-	path = libs/imgui
-	url = https://github.com/ocornut/imgui.git
-[submodule "libs/OBJ-Loader"]
-	path = libs/OBJ-Loader
-	url = https://github.com/Bly7/OBJ-Loader.git
-[submodule "libs/ShlibVK"]
-	path = libs/ShlibVK
-	url = https://github.com/LuisDaLizard/ShlibVK.git
