@@ -5,7 +5,7 @@
 #ifndef GRASSRENDERER_MODEL_H
 #define GRASSRENDERER_MODEL_H
 
-#include <ShlibGraphics/ShlibGraphics.h>
+#include <ShlibVK/ShlibVK.h>
 
 struct Vertex
 {
@@ -23,14 +23,16 @@ struct Triangle
 class Model
 {
 private:
+    Graphics &mGraphics;
+    Pipeline &mPipeline;
     Mesh mMesh;
     Triangle *mTriangles;
     int mNumTriangles;
 
     bool GenerateMesh();
 public:
-    explicit Model(const char *pFilename);
-    Model(const Triangle *pTriangles, int numTriangles);
+    explicit Model(Graphics &graphics, Pipeline &pipeline, const char *pFilename);
+    Model(Graphics &graphics, Pipeline &pipeline, const Triangle *pTriangles, int numTriangles);
     ~Model();
 
     Triangle GetTriangle(int index) const;

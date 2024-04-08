@@ -1,18 +1,16 @@
-//
-// Created by Luis on 3/26/2024.
-//
-
 #include "Application.h"
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
+#include <imgui_impl_vulkan.h>
 
 void Application::Run()
 {
     InitWindow();
+    InitGraphics();
+    InitUniforms();
+    InitPipelines();
     InitGui();
-    InitPrograms();
     InitModels();
 
     double start = GetTime();
@@ -25,22 +23,16 @@ void Application::Run()
 
         WindowPollEvents(mWindow);
 
+        GraphicsBeginRenderPass(mGraphics);
+
         UpdateGui();
-        UpdateCamera();
+//        UpdateCamera();
 
-        GLClear();
-        mGrass->Draw(mCameraProjection, mCameraView, mBladeHeight, mBladeWidth, mShowPatches);
-
-        ProgramUse(mModelShader);
-        ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uProjection"), mCameraProjection);
-        ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uView"), mCameraView);
-        ProgramUploadMatrix(mModelShader, ProgramUniformLocation(mModelShader, "uWorld"), MatrixIdentity());
-        ProgramUploadVec3(mModelShader, ProgramUniformLocation(mModelShader, "uLightPos"), mLightPos);
         mModel->Draw();
 
         DrawGui();
 
-        WindowSwapBuffers(mWindow);
+        GraphicsEndRenderPass(mGraphics);
         end = GetTime();
     }
 
@@ -50,14 +42,26 @@ void Application::Run()
 void Application::InitWindow()
 {
     WindowCreateInfo createInfo = {  };
-    createInfo.glVersionMajor = 4;
-    createInfo.glVersionMinor = 6;
     createInfo.width = 800;
     createInfo.height = 600;
     createInfo.pTitle = "Grass Renderer";
+    createInfo.pUserData = this;
+    createInfo.resizeCallback = Application::ResizeCallback;
 
-    if (!WindowInit(&createInfo, &mWindow))
+    if (!WindowCreate(&createInfo, &mWindow))
         WriteError(1, "Unable to create window!");
+}
+
+void Application::InitGraphics()
+{
+    GraphicsCreateInfo createInfo = { };
+    createInfo.window = mWindow;
+    createInfo.debug = true;
+    createInfo.pAppName = "Grass Renderer";
+    createInfo.pEngineName = "Grass Engine";
+
+    if (!GraphicsCreate(&createInfo, &mGraphics))
+        WriteError(1, "Failed to initialize graphics!");
 }
 
 void Application::InitGui()
@@ -70,36 +74,101 @@ void Application::InitGui()
     io.IniFilename = nullptr;
     io.LogFilename = nullptr;
 
-    ImGui_ImplGlfw_InitForOpenGL((GLFWwindow *)mWindow->pHandle, true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui_ImplGlfw_InitForVulkan((GLFWwindow *)mWindow->pHandle, true);
+    ImGui_ImplVulkan_InitInfo initInfo = { };
+    initInfo.Instance = (VkInstance)(mGraphics->vkInstance);
+    initInfo.PhysicalDevice = (VkPhysicalDevice)(mGraphics->vkPhysicalDevice);
+    initInfo.Device = (VkDevice)(mGraphics->vkDevice);
+    initInfo.QueueFamily = mGraphics->vkGraphicsQueueIndex;
+    initInfo.Queue = (VkQueue)(mGraphics->vkGraphicsQueue);
+    initInfo.DescriptorPool = (VkDescriptorPool)(mGraphics->vkDescriptorPool);
+    initInfo.RenderPass = (VkRenderPass)(mGraphics->vkRenderPass);
+    initInfo.MinImageCount = 2;
+    initInfo.ImageCount = mGraphics->vkSwapChainImageCount;
+    initInfo.MSAASamples = (VkSampleCountFlagBits)(1);
+    if (!ImGui_ImplVulkan_Init(&initInfo))
+        WriteError(1, "Failed to initialize GUI");
+
+    if (!ImGui_ImplVulkan_CreateFontsTexture())
+        WriteError(1, "Failed to create and upload font textures");
 }
 
-void Application::InitPrograms()
-{
-    ProgramCreateInfo createInfo = {};
-    createInfo.pVertexSource = FileReadText("shaders/Model.vert");
-    createInfo.pFragmentSource = FileReadText("shaders/Model.frag");
 
-    if (!ProgramCreate(&createInfo, &mModelShader))
+void Application::InitUniforms()
+{
+    mCameraMatrices.projection = MatrixTranspose(MatrixPerspective((float)mWindow->width / (float)mWindow->height, 45.0f, 0.01f, 1000.0f));
+    mCameraMatrices.view = MatrixTranspose(MatrixLookAt({0, -4, 1}, {0, 0, 0}, {0, 1, 0}));
+    mCameraMatrices.world = MatrixIdentity();
+
+    UniformBufferCreateInfo bufferInfo = { 0 };
+    bufferInfo.binding = 0;
+    bufferInfo.size = sizeof(UniformMatrices);
+
+    UniformBufferCreate(mGraphics, &bufferInfo, &mUniformMatrices);
+    UniformBufferSetData(mUniformMatrices, &mCameraMatrices, sizeof(UniformMatrices));
+}
+
+void Application::InitPipelines()
+{
+    Descriptor matrices = { 0 };
+    matrices.location = 0;
+    matrices.type = DESCRIPTOR_TYPE_UNIFORM;
+    matrices.count = 1;
+    matrices.stage = STAGE_VERTEX;
+    matrices.uniform = mUniformMatrices;
+
+    Attribute position = { 0 };
+    position.location = 0;
+    position.offset = 0;
+    position.components = 3;
+
+    Attribute normal = { 0 };
+    normal.location = 1;
+    normal.offset = sizeof(Vec3);
+    normal.components = 3;
+
+    Attribute attribs[2] = {position, normal};
+
+    int size = 0;
+    PipelineCreateInfo modelPipeline = { };
+    modelPipeline.stride = sizeof(Vertex);
+    modelPipeline.topology = TOPOLOGY_TRIANGLE_LIST;
+    modelPipeline.pVertexShaderCode = (unsigned int *)FileReadBytes("shaders/bin/Model.vert", &size);
+    modelPipeline.vertexShaderSize = size;
+    modelPipeline.pFragmentShaderCode = (unsigned int *)FileReadBytes("shaders/bin/Model.frag", &size);
+    modelPipeline.fragmentShaderSize = size;
+    modelPipeline.attributeCount = 2;
+    modelPipeline.pAttributes = attribs;
+    modelPipeline.descriptorCount = 1;
+    modelPipeline.pDescriptors = &matrices;
+
+    if (!PipelineCreate(mGraphics, &modelPipeline, &mModelPipeline))
         WriteError(1, "Unable to load model shader");
 }
 
 void Application::InitModels()
 {
-    mGrass = new Grass();
-    mModel = new Model(Meshes::PlaneMesh, 2);
-    //mModel = new Model("models/terrain/terrain.obj");
+    //mGrass = new Grass();
+    mModel = new Model(mGraphics, mModelPipeline, Meshes::PlaneMesh, 2);
 }
+
+void Application::ResizeCallback(void *pUserData, int width, int height)
+{
+    Application *app = (Application *)pUserData;
+
+
+}
+
 
 void Application::UpdateGui()
 {
-    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    if (mGrass->DoneGenerating())
-        mGrass->FinishGeneration();
-    else
+//    if (mGrass->DoneGenerating())
+//        mGrass->FinishGeneration();
+//    else
         mGenerationTime += mDeltaTime;
 
     {
@@ -125,7 +194,7 @@ void Application::UpdateGui()
 
             if (ImGui::Button("Generate"))
             {
-                mGrass->Generate(mModel, mNumBlades, mPatchSize);
+                //mGrass->Generate(mModel, mNumBlades, mPatchSize);
                 mGenerationTime = 0;
             }
             ImGui::SameLine();
@@ -155,9 +224,10 @@ void Application::UpdateGui()
 
 void Application::DrawGui()
 {
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), (VkCommandBuffer)mGraphics->vkCommandBuffer);
 }
 
+/*
 void Application::UpdateCamera()
 {
     mPrevMouse = mMouse;
@@ -193,12 +263,13 @@ void Application::UpdateCamera()
     mCameraView = MatrixLookAt(mCameraPos, mCameraTarget, {0, 1, 0});
     mCameraProjection = MatrixPerspective((float)mWindow->width / (float)mWindow->height, 45, 0.01f, 1000.0f);
 }
+ */
 
 void Application::Cleanup()
 {
-    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
-    WindowFree(mWindow);
+    WindowDestroy(mWindow);
 }

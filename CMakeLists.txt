@@ -1,32 +1,37 @@
 cmake_minimum_required(VERSION 3.23)
 project(GrassRenderer)
 
-add_subdirectory(libs/ShlibGraphics)
+add_subdirectory(libs/ShlibVK)
+
+find_package(Vulkan)
 
 set(CMAKE_CXX_STANDARD 20)
 
 set(SOURCES
         src/Application.cpp
-        src/Grass.cpp
         src/Model.cpp
 
         libs/imgui/imgui.cpp
+        libs/imgui/imgui_demo.cpp
         libs/imgui/imgui_draw.cpp
         libs/imgui/imgui_tables.cpp
         libs/imgui/imgui_widgets.cpp
         libs/imgui/backends/imgui_impl_glfw.cpp
-        libs/imgui/backends/imgui_impl_opengl3.cpp)
+        libs/imgui/backends/imgui_impl_vulkan.cpp
+        )
 
 set(INCLUDES
         include/
-        libs/ShlibGraphics/include/
+        libs/ShlibVK/include/
         libs/imgui/
         libs/imgui/backends/
         libs/OBJ-Loader/Source/
+        ${Vulkan_INCLUDE_DIRS}
         )
 
 set(LIBS
-        ShlibGraphics
+        ShlibVK
+        ${Vulkan_LIBRARIES}
         )
 
 add_executable(${PROJECT_NAME} main.cpp ${SOURCES})

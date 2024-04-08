@@ -5,20 +5,29 @@
 #ifndef GRASSRENDERER_APPLICATION_H
 #define GRASSRENDERER_APPLICATION_H
 
-#include <ShlibGraphics/ShlibGraphics.h>
+#include <ShlibVK/ShlibVK.h>
 #include "Model.h"
-#include "Grass.h"
 
 class Application
 {
 private:
+    struct UniformMatrices
+    {
+        Matrix projection;
+        Matrix view;
+        Matrix world;
+    };
+
+private:
     Window mWindow;
+    Graphics mGraphics;
+    UniformBuffer mUniformMatrices;
+    Pipeline mModelPipeline;
     Model *mModel;
-    Program mModelShader;
     double mDeltaTime;
 
     // Grass Related Variables
-    Grass *mGrass;
+    //Grass *mGrass;
     int mPatchSize = 32;
     int mNumBlades = 0;
     float mBladeHeight = 0.5f;
@@ -33,17 +42,21 @@ private:
     double mGenerationTime = 0;
     Vec2 mMouse, mPrevMouse, mGrassGenerationWindowSize, mGrassGenerationWindowPos;
     Vec3 mCameraPos = {0, 0, 0}, mCameraTarget = {0, 0, 0}, mLightPos = {0, 100, 100};
-    Matrix mCameraProjection, mCameraView;
+    UniformMatrices mCameraMatrices;
 
     void InitWindow();
+    void InitGraphics();
     void InitGui();
-    void InitPrograms();
+    void InitUniforms();
+    void InitPipelines();
     void InitModels();
+
+    static void ResizeCallback(void *pUserData, int width, int height);
 
     void UpdateGui();
     void DrawGui();
 
-    void UpdateCamera();
+    //void UpdateCamera();
 
     void Cleanup();
 public:

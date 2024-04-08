@@ -7,7 +7,7 @@
 
 #include "Model.h"
 
-#include <ShlibGraphics/ShlibGraphics.h>
+#include <ShlibVK/ShlibVK.h>
 #include <random>
 #include <mutex>
 #include <thread>

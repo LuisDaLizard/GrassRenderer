@@ -7,8 +7,8 @@
 #include <cstring>
 #include <OBJ_Loader.h>
 
-Model::Model(const Triangle *pTriangles, int numTriangles)
-    : mMesh(nullptr), mNumTriangles(numTriangles)
+Model::Model(Graphics &graphics, Pipeline &pipeline, const Triangle *pTriangles, int numTriangles)
+    : mGraphics(graphics), mPipeline(pipeline), mMesh(nullptr), mNumTriangles(numTriangles)
 {
     mTriangles = new Triangle[numTriangles];
     memcpy(mTriangles, pTriangles, mNumTriangles * sizeof(Triangle));
@@ -17,8 +17,8 @@ Model::Model(const Triangle *pTriangles, int numTriangles)
         WriteError(1, "Unable to generate mesh");
 }
 
-Model::Model(const char *pFilename)
-    : mMesh(nullptr), mTriangles(nullptr), mNumTriangles(0)
+Model::Model(Graphics &graphics, Pipeline &pipeline, const char *pFilename)
+    : mGraphics(graphics), mPipeline(pipeline), mMesh(nullptr), mTriangles(nullptr), mNumTriangles(0)
 {
     objl::Loader loader;
 
@@ -57,7 +57,7 @@ Model::~Model()
 {
     delete[] mTriangles;
     if (mMesh)
-        MeshDestroy(mMesh);
+        MeshDestroy(mGraphics, mMesh);
 }
 
 Triangle Model::GetTriangle(int index) const
@@ -76,19 +76,16 @@ void Model::Draw() const
 {
     if (!mMesh)
         return;
-    MeshDraw(mMesh);
+    PipelineBind(mGraphics, mPipeline);
+    MeshDraw(mGraphics, mMesh);
 }
 
 bool Model::GenerateMesh()
 {
     MeshCreateInfo createInfo = {};
     createInfo.stride = sizeof(Vertex);
-    createInfo.topology = TOPOLOGY_TRIANGLES;
-    int attribs[] = {3, 3};
-    createInfo.numAttributes = 2;
-    createInfo.pAttributeComponents = attribs;
-    createInfo.numVertices = mNumTriangles * 3;
-    createInfo.pVertexData = (float *)mTriangles;
+    createInfo.vertexCount = mNumTriangles * 3;
+    createInfo.pVertices = (float *)mTriangles;
 
-    return MeshCreate(&createInfo, &mMesh);
+    return MeshCreate(mGraphics, &createInfo, &mMesh);
 }
