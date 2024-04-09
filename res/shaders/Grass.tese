@@ -1,22 +1,23 @@
-#version 400 core
+#version 450
 
-layout (quads, equal_spacing, ccw) in;
+layout(quads, equal_spacing, ccw) in;
 
-patch in float tcPatch;
-patch in vec3 tcV1;
-patch in vec3 tcV2;
-patch in vec3 tcBladeDir;
-patch in vec3 tcBladeUp;
-patch in vec3 tcBladeBitangent;
+layout(location = 0) patch in float tcPatch;
+layout(location = 1) patch in vec3 tcV1;
+layout(location = 2) patch in vec3 tcV2;
+layout(location = 3) patch in vec3 tcBladeDir;
+layout(location = 4) patch in vec3 tcBladeUp;
+layout(location = 5) patch in vec3 tcBladeBitangent;
 
-uniform mat4 uProjection;
-uniform mat4 uView;
-uniform mat4 uWorld;
-uniform float uHeight;
-uniform float uWidth;
+layout(binding = 0) uniform UniformMatrices
+{
+    mat4 uProj;
+    mat4 uView;
+    mat4 uWorld;
+} Uniforms;
 
-flat out float tePatch;
-out float teHeight;
+layout(location = 0) flat out float tePatch;
+layout(location = 1) out float teHeight;
 
 vec3 interpolate(vec3 curvePoint1, vec3 curvePoint2, float t)
 {
@@ -25,10 +26,12 @@ vec3 interpolate(vec3 curvePoint1, vec3 curvePoint2, float t)
 
 void main()
 {
+    float width = 0.05f;
+
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
-    vec3 offset = (tcBladeDir * uWidth) * 0.5;
+    vec3 offset = (tcBladeDir * width) * 0.5;
 
     vec3 v0 = vec3(gl_in[0].gl_Position) - offset;
     vec3 v1 = tcV1 - offset;
@@ -51,5 +54,5 @@ void main()
 
     teHeight = v;
     tePatch = tcPatch;
-    gl_Position = uProjection * uView * vec4(position, 1);
+    gl_Position = Uniforms.uProj * Uniforms.uView * vec4(position, 1);
 }

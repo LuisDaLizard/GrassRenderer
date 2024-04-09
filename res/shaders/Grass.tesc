@@ -1,19 +1,19 @@
-#version 400 core
+#version 450
 
-layout (vertices = 1) out;
+layout(vertices = 1) out;
 
-flat in float vPatch[];
-flat in vec3 vV1[];
-flat in vec3 vV2[];
-flat in vec3 vBladeDir[];
-flat in vec3 vBladeUp[];
+layout(location = 0) flat in float vPatch[];
+layout(location = 1) flat in vec3 vV1[];
+layout(location = 2) flat in vec3 vV2[];
+layout(location = 3) flat in vec3 vBladeDir[];
+layout(location = 4) flat in vec3 vBladeUp[];
 
-patch out float tcPatch;
-patch out vec3 tcV1;
-patch out vec3 tcV2;
-patch out vec3 tcBladeDir;
-patch out vec3 tcBladeUp;
-patch out vec3 tcBladeBitangent;
+layout(location = 0) patch out float tcPatch;
+layout(location = 1) patch out vec3 tcV1;
+layout(location = 2) patch out vec3 tcV2;
+layout(location = 3) patch out vec3 tcBladeDir;
+layout(location = 4) patch out vec3 tcBladeUp;
+layout(location = 5) patch out vec3 tcBladeBitangent;
 
 void main()
 {

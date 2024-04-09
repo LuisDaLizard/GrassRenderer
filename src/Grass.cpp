@@ -5,28 +5,73 @@
 
 #include <cfloat>
 
-Grass::Grass()
-    : mGenerator(std::random_device{}()), mGrassCreateInfo({}), mNumBlades(0), mPatchSize(0), mGenerationThread()
+Grass::Grass(Graphics &graphics)
+    : mGraphics(graphics), mGenerator(std::random_device{}()), mGrassCreateInfo({}), mNumBlades(0), mPatchSize(0), mGenerationThread()
 {
-    mGrassCreateInfo.topology = TOPOLOGY_PATCHES;
-    mGrassCreateInfo.patchSize = 1;
     mGrassCreateInfo.stride = sizeof(GrassBladeVertex);
-    mGrassCreateInfo.numAttributes = 4;
-    mGrassCreateInfo.pAttributeComponents = new int[] {3, 3, 3, 1};
 
-    ProgramCreateInfo grassShader = {};
-    grassShader.pVertexSource = FileReadText("shaders/Grass.vert");
-    grassShader.pTessControlSource = FileReadText("shaders/Grass.tesc");
-    grassShader.pTessEvaluationSource = FileReadText("shaders/Grass.tese");
-    grassShader.pFragmentSource = FileReadText("shaders/Grass.frag");
+    UniformBufferCreateInfo bufferInfo;
+    bufferInfo.binding = 0;
+    bufferInfo.size = sizeof(UniformMatrices);
 
-    if (!ProgramCreate(&grassShader, &mGrassShader))
-        WriteError(1, "Unable to create grass shader");
+    UniformBufferCreate(mGraphics, &bufferInfo, &mMatrixBuffer);
+
+    Attribute attribs[4];
+    attribs[0].location = 0;
+    attribs[0].offset = 0;
+    attribs[0].components = 3;
+    attribs[1].location = 1;
+    attribs[1].offset = offsetof(GrassBladeVertex, normal);
+    attribs[1].components = 3;
+    attribs[2].location = 2;
+    attribs[2].offset = offsetof(GrassBladeVertex, direction);
+    attribs[2].components = 3;
+    attribs[3].location = 3;
+    attribs[3].offset = offsetof(GrassBladeVertex, patch);
+    attribs[3].components = 1;
+
+    Descriptor descriptors[1];
+    descriptors[0].location = 0;
+    descriptors[0].stage = STAGE_TESSELATION_EVALUATION;
+    descriptors[0].count = 1;
+    descriptors[0].type = DESCRIPTOR_TYPE_UNIFORM;
+    descriptors[0].uniform = mMatrixBuffer;
+
+    int size = 0;
+    PipelineCreateInfo grassPipeline;
+    grassPipeline.stride = sizeof(GrassBladeVertex);
+    grassPipeline.topology = TOPOLOGY_PATCH_LIST;
+    grassPipeline.patchSize = 1;
+    grassPipeline.pVertexShaderCode = (unsigned int *)FileReadBytes("shaders/bin/Grass.vert", &size);
+    grassPipeline.vertexShaderSize = size;
+    grassPipeline.pTessCtrlCode = (unsigned int *)FileReadBytes("shaders/bin/Grass.tesc", &size);
+    grassPipeline.tessCtrlShaderSize = size;
+    grassPipeline.pTessEvalCode = (unsigned int *)FileReadBytes("shaders/bin/Grass.tese", &size);
+    grassPipeline.tessEvalShaderSize = size;
+    grassPipeline.pFragmentShaderCode = (unsigned int *)FileReadBytes("shaders/bin/Grass.frag", &size);
+    grassPipeline.fragmentShaderSize = size;
+    grassPipeline.attributeCount = 4;
+    grassPipeline.pAttributes = attribs;
+    grassPipeline.descriptorCount = 1;
+    grassPipeline.pDescriptors = descriptors;
+
+    if (!PipelineCreate(mGraphics, &grassPipeline, &mGrassPipeline))
+    {
+        WriteError(1, "Failed to create grass pipeline");
+    }
 }
 
 Grass::~Grass()
 {
     delete[] mGrassBlades;
+
+    if (mGenerationThread.joinable())
+        mGenerationThread.join();
+
+    if (mGrassMesh)
+        MeshDestroy(mGraphics, mGrassMesh);
+    UniformBufferDestroy(mGraphics, mMatrixBuffer);
+    PipelineDestroy(mGraphics, mGrassPipeline);
 }
 
 void Grass::Generate(Model *pModel, int numBlades, int patchSize)
@@ -62,15 +107,14 @@ void Grass::Draw(Matrix projection, Matrix view, float height, float width, bool
     if (!mGrassMesh)
         return;
 
-    ProgramUse(mGrassShader);
-    ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uWorld"), MatrixIdentity());
-    ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uView"), view);
-    ProgramUploadMatrix(mGrassShader, ProgramUniformLocation(mGrassShader, "uProjection"), projection);
-    ProgramUploadFloat(mGrassShader, ProgramUniformLocation(mGrassShader, "uHeight"), height);
-    ProgramUploadFloat(mGrassShader, ProgramUniformLocation(mGrassShader, "uWidth"), width);
-    ProgramUploadBool(mGrassShader, ProgramUniformLocation(mGrassShader, "uShowPatches"), showPatches);
-    UniformBufferBind(mColorBuffer, 0);
-    MeshDraw(mGrassMesh);
+    UniformMatrices matrices = { };
+    matrices.projection = projection;
+    matrices.view = view;
+    matrices.world = MatrixIdentity();
+    UniformBufferSetData(mMatrixBuffer, &matrices, sizeof(UniformMatrices));
+
+    PipelineBind(mGraphics, mGrassPipeline);
+    MeshDraw(mGraphics, mGrassMesh);
 }
 
 bool Grass::DoneGenerating()
@@ -199,30 +243,17 @@ void Grass::GenerateMesh()
         vertices[i].direction = mGrassBlades[i].dir;
         vertices[i].patch = (float)mGrassBlades[i].patch;
 
-        mGrassCreateInfo.numVertices = mNumBlades;
-        mGrassCreateInfo.pVertexData = (float *)vertices;
+        mGrassCreateInfo.vertexCount = mNumBlades;
+        mGrassCreateInfo.pVertices = (float *)vertices;
     }
 
     if (mGrassMesh)
-        MeshDestroy(mGrassMesh);
+        MeshDestroy(mGraphics, mGrassMesh);
 
 
-    if (!MeshCreate(&mGrassCreateInfo, &mGrassMesh))
+    if (!MeshCreate(mGraphics, &mGrassCreateInfo, &mGrassMesh))
         WriteError(1, "Unable to create grass mesh");
 
 
     delete[] vertices;
-
-    UniformBufferCreateInfo buffer = {};
-    buffer.size = mNumPatches * sizeof(Vec4);
-    buffer.pData = mPatchColors;
-    buffer.isStatic = true;
-
-    if (mColorBuffer)
-        UniformBufferDestroy(mColorBuffer);
-
-    if (!UniformBufferCreate(&buffer, &mColorBuffer))
-        WriteError(1, "Unable to create uniform buffer");
-
-    UniformBufferBindToProgram(mColorBuffer, mGrassShader, "Colors", 0);
 }

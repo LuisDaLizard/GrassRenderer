@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(SOURCES
         src/Application.cpp
         src/Model.cpp
+        src/Grass.cpp
 
         libs/imgui/imgui.cpp
         libs/imgui/imgui_demo.cpp

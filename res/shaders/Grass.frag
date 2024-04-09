@@ -1,30 +1,30 @@
-#version 400 core
+#version 450
 
 #define MAX_COLORS 256
 
-out vec4 oColor;
+layout(location = 0) out vec4 oColor;
 
-layout (std140) uniform Colors
-{
-    vec4 uColors[MAX_COLORS];
-};
+//layout (std140) uniform Colors
+//{
+//    vec4 uColors[MAX_COLORS];
+//};
 
-uniform bool uShowPatches;
-uniform int uNumPatches;
+//uniform bool uShowPatches;
+//uniform int uNumPatches;
 
-flat in float tePatch;
-in float teHeight;
+layout(location = 0) flat in float tePatch;
+layout(location = 1) in float teHeight;
 
 void main()
 {
 
-    if (uShowPatches)
+//    if (uShowPatches)
+//    {
+//        int patchIndex = int(floor(tePatch));
+//        oColor = uColors[patchIndex];
+//    }
+//    else
     {
-        int patchIndex = int(floor(tePatch));
-        oColor = uColors[patchIndex];
-    }
-    else
-    {
-        oColor = teHeight * vec4(0, 1, 0, 1);
+        oColor = vec4(0, teHeight, 0, 1);
     }
 }

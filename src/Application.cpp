@@ -26,9 +26,10 @@ void Application::Run()
         GraphicsBeginRenderPass(mGraphics);
 
         UpdateGui();
-//        UpdateCamera();
+        UpdateCamera();
 
         mModel->Draw();
+        mGrass->Draw(mCameraMatrices.projection, mCameraMatrices.view, 0, 0, 0);
 
         DrawGui();
 
@@ -45,8 +46,6 @@ void Application::InitWindow()
     createInfo.width = 800;
     createInfo.height = 600;
     createInfo.pTitle = "Grass Renderer";
-    createInfo.pUserData = this;
-    createInfo.resizeCallback = Application::ResizeCallback;
 
     if (!WindowCreate(&createInfo, &mWindow))
         WriteError(1, "Unable to create window!");
@@ -97,7 +96,7 @@ void Application::InitGui()
 void Application::InitUniforms()
 {
     mCameraMatrices.projection = MatrixTranspose(MatrixPerspective((float)mWindow->width / (float)mWindow->height, 45.0f, 0.01f, 1000.0f));
-    mCameraMatrices.view = MatrixTranspose(MatrixLookAt({0, -4, 1}, {0, 0, 0}, {0, 1, 0}));
+    mCameraMatrices.view = MatrixTranspose(MatrixLookAt({0, 3, 4}, {0, 0, 0}, {0, -1, 0}));
     mCameraMatrices.world = MatrixIdentity();
 
     UniformBufferCreateInfo bufferInfo = { 0 };
@@ -148,17 +147,9 @@ void Application::InitPipelines()
 
 void Application::InitModels()
 {
-    //mGrass = new Grass();
+    mGrass = new Grass(mGraphics);
     mModel = new Model(mGraphics, mModelPipeline, Meshes::PlaneMesh, 2);
 }
-
-void Application::ResizeCallback(void *pUserData, int width, int height)
-{
-    Application *app = (Application *)pUserData;
-
-
-}
-
 
 void Application::UpdateGui()
 {
@@ -166,9 +157,9 @@ void Application::UpdateGui()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-//    if (mGrass->DoneGenerating())
-//        mGrass->FinishGeneration();
-//    else
+    if (mGrass->DoneGenerating())
+        mGrass->FinishGeneration();
+    else
         mGenerationTime += mDeltaTime;
 
     {
@@ -194,7 +185,7 @@ void Application::UpdateGui()
 
             if (ImGui::Button("Generate"))
             {
-                //mGrass->Generate(mModel, mNumBlades, mPatchSize);
+                mGrass->Generate(mModel, mNumBlades, mPatchSize);
                 mGenerationTime = 0;
             }
             ImGui::SameLine();
@@ -227,7 +218,7 @@ void Application::DrawGui()
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), (VkCommandBuffer)mGraphics->vkCommandBuffer);
 }
 
-/*
+
 void Application::UpdateCamera()
 {
     mPrevMouse = mMouse;
@@ -243,7 +234,7 @@ void Application::UpdateCamera()
         mouseDelta.x = mMouse.x - mPrevMouse.x;
         mouseDelta.y = mMouse.y - mPrevMouse.y;
 
-        mCameraYaw -= mouseDelta.x * mCameraSensitivity;
+        mCameraYaw += mouseDelta.x * mCameraSensitivity;
         mCameraPitch += mouseDelta.y * mCameraSensitivity;
         mCameraPitch = CLAMP(-89.0f, mCameraPitch, 89.0f);
     }
@@ -260,16 +251,25 @@ void Application::UpdateCamera()
     mCameraPos.y = sinf(mCameraPitch * DEG2RADF) * mCameraRadius + mCameraTarget.y;
     mCameraPos.z = cosf(mCameraYaw * DEG2RADF) * cosf(mCameraPitch * DEG2RADF) * mCameraRadius;
 
-    mCameraView = MatrixLookAt(mCameraPos, mCameraTarget, {0, 1, 0});
-    mCameraProjection = MatrixPerspective((float)mWindow->width / (float)mWindow->height, 45, 0.01f, 1000.0f);
+    mCameraMatrices.view = MatrixTranspose(MatrixLookAt(mCameraPos, mCameraTarget, {0, -1, 0}));
+    mCameraMatrices.projection = MatrixTranspose(MatrixPerspective((float)mWindow->width / (float)mWindow->height, 45, 0.01f, 1000.0f));
+
+    UniformBufferSetData(mUniformMatrices, &mCameraMatrices, sizeof(UniformMatrices));
 }
- */
+
 
 void Application::Cleanup()
 {
+
+    delete mModel;
+    delete mGrass;
+
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
+    UniformBufferDestroy(mGraphics, mUniformMatrices);
+    PipelineDestroy(mGraphics, mModelPipeline);
+    GraphicsDestroy(mGraphics);
     WindowDestroy(mWindow);
 }

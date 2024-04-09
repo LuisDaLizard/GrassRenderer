@@ -7,6 +7,7 @@
 
 #include <ShlibVK/ShlibVK.h>
 #include "Model.h"
+#include "Grass.h"
 
 class Application
 {
@@ -27,7 +28,7 @@ private:
     double mDeltaTime;
 
     // Grass Related Variables
-    //Grass *mGrass;
+    Grass *mGrass;
     int mPatchSize = 32;
     int mNumBlades = 0;
     float mBladeHeight = 0.5f;
@@ -51,12 +52,10 @@ private:
     void InitPipelines();
     void InitModels();
 
-    static void ResizeCallback(void *pUserData, int width, int height);
-
     void UpdateGui();
     void DrawGui();
 
-    //void UpdateCamera();
+    void UpdateCamera();
 
     void Cleanup();
 public:

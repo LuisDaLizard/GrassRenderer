@@ -32,10 +32,18 @@ private:
         float patch;
     };
 
+    struct UniformMatrices
+    {
+        Matrix projection;
+        Matrix view;
+        Matrix world;
+    };
+
 private:
+    Graphics &mGraphics;
     Mesh mGrassMesh = nullptr;
-    Program mGrassShader = nullptr;
-    UniformBuffer mColorBuffer = nullptr;
+    Pipeline mGrassPipeline = nullptr;
+    UniformBuffer mColorBuffer = nullptr, mMatrixBuffer = nullptr;
     GrassBlade *mGrassBlades = nullptr;
     Vec4 *mPatchColors = nullptr;
     int mNumBlades, mPatchSize, mNumPatches;
@@ -52,7 +60,7 @@ private:
     void GeneratePatches();
     void GenerateMesh();
 public:
-    Grass();
+    Grass(Graphics &graphics);
     ~Grass();
 
     void Generate(Model *pModel, int numBlades, int patchSize);
