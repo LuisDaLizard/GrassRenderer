@@ -35,8 +35,14 @@ set(LIBS
         ${Vulkan_LIBRARIES}
         )
 
+set(RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+if(WIN32)
+        set(RESOURCE_DIR ${RESOURCE_DIR}/Debug)
+endif()
+
 add_executable(${PROJECT_NAME} main.cpp ${SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDES})
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/res/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/Debug)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/res/ DESTINATION ${RESOURCE_DIR})
