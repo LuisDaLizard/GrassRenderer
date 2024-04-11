@@ -10,16 +10,22 @@ layout(location = 1) flat out vec3 vV1;
 layout(location = 2) flat out vec3 vV2;
 layout(location = 3) flat out vec3 vBladeDir;
 layout(location = 4) flat out vec3 vBladeUp;
+layout(location = 5) flat out float vWidth;
+
+layout(binding = 0) uniform VertexUniforms
+{
+    float uWidth;
+    float uHeight;
+} Uniforms;
 
 void main()
 {
-    float height = 0.5f;
-
     vPatch = aPatch - 0.01;
     vBladeUp = aNormal;
     vBladeDir = aDirection;
-    vV1 = aPosition + (height / 2.0) * vBladeUp;
-    vV2 = aPosition + height * vBladeUp;
+    vV1 = aPosition + (Uniforms.uHeight / 2.0) * vBladeUp;
+    vV2 = aPosition + Uniforms.uHeight * vBladeUp;
+    vWidth = Uniforms.uWidth;
 
     gl_Position = vec4(aPosition, 1);
 }

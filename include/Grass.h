@@ -12,6 +12,8 @@
 #include <mutex>
 #include <thread>
 
+#define MAX_COLORS 256
+
 struct GrassBlade
 {
     Vec3 pos;
@@ -32,20 +34,34 @@ private:
         float patch;
     };
 
-    struct UniformMatrices
+    struct VertexUniforms
+    {
+        float width;
+        float height;
+    };
+
+    struct MatrixUniforms
     {
         Matrix projection;
         Matrix view;
         Matrix world;
     };
 
+    struct FragmentUniforms
+    {
+        Vec4 colors[MAX_COLORS];
+        int showPatches;
+    };
+
 private:
     Graphics &mGraphics;
     Mesh mGrassMesh = nullptr;
     Pipeline mGrassPipeline = nullptr;
-    UniformBuffer mColorBuffer = nullptr, mMatrixBuffer = nullptr;
+    VertexUniforms mVertexUniforms;
+    MatrixUniforms mMatrixUniforms;
+    FragmentUniforms mFragmentUniforms;
+    UniformBuffer mVertexUniformBuffer = nullptr, mMatrixUniformBuffer = nullptr, mFragmentUniformBuffer = nullptr;
     GrassBlade *mGrassBlades = nullptr;
-    Vec4 *mPatchColors = nullptr;
     int mNumBlades, mPatchSize, mNumPatches;
 
     MeshCreateInfo mGrassCreateInfo;

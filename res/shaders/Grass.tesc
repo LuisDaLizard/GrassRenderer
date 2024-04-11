@@ -7,6 +7,7 @@ layout(location = 1) flat in vec3 vV1[];
 layout(location = 2) flat in vec3 vV2[];
 layout(location = 3) flat in vec3 vBladeDir[];
 layout(location = 4) flat in vec3 vBladeUp[];
+layout(location = 5) flat in float vWidth[];
 
 layout(location = 0) patch out float tcPatch;
 layout(location = 1) patch out vec3 tcV1;
@@ -14,6 +15,7 @@ layout(location = 2) patch out vec3 tcV2;
 layout(location = 3) patch out vec3 tcBladeDir;
 layout(location = 4) patch out vec3 tcBladeUp;
 layout(location = 5) patch out vec3 tcBladeBitangent;
+layout(location = 6) patch out float tcWidth;
 
 void main()
 {
@@ -25,6 +27,7 @@ void main()
     tcBladeDir = vBladeDir[0];
     tcBladeUp = vBladeUp[0];
     tcBladeBitangent = vBladeDir[0];
+    tcWidth = vWidth[0];
 
     gl_TessLevelInner[0] = 1;
     gl_TessLevelInner[1] = 10;

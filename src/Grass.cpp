@@ -12,30 +12,49 @@ Grass::Grass(Graphics &graphics)
 
     UniformBufferCreateInfo bufferInfo;
     bufferInfo.binding = 0;
-    bufferInfo.size = sizeof(UniformMatrices);
-
-    UniformBufferCreate(mGraphics, &bufferInfo, &mMatrixBuffer);
+    bufferInfo.size = sizeof(VertexUniforms);
+    UniformBufferCreate(mGraphics, &bufferInfo, &mVertexUniformBuffer);
+    bufferInfo.size = sizeof(MatrixUniforms);
+    UniformBufferCreate(mGraphics, &bufferInfo, &mMatrixUniformBuffer);
+    bufferInfo.size = sizeof(FragmentUniforms);
+    UniformBufferCreate(mGraphics, &bufferInfo, &mFragmentUniformBuffer);
 
     Attribute attribs[4];
     attribs[0].location = 0;
     attribs[0].offset = 0;
     attribs[0].components = 3;
+
     attribs[1].location = 1;
     attribs[1].offset = offsetof(GrassBladeVertex, normal);
     attribs[1].components = 3;
+
     attribs[2].location = 2;
     attribs[2].offset = offsetof(GrassBladeVertex, direction);
     attribs[2].components = 3;
+
     attribs[3].location = 3;
     attribs[3].offset = offsetof(GrassBladeVertex, patch);
     attribs[3].components = 1;
 
-    Descriptor descriptors[1];
+    Descriptor descriptors[3];
+
     descriptors[0].location = 0;
-    descriptors[0].stage = STAGE_TESSELATION_EVALUATION;
+    descriptors[0].stage = STAGE_VERTEX;
     descriptors[0].count = 1;
     descriptors[0].type = DESCRIPTOR_TYPE_UNIFORM;
-    descriptors[0].uniform = mMatrixBuffer;
+    descriptors[0].uniform = mVertexUniformBuffer;
+
+    descriptors[1].location = 1;
+    descriptors[1].stage = STAGE_TESSELATION_EVALUATION;
+    descriptors[1].count = 1;
+    descriptors[1].type = DESCRIPTOR_TYPE_UNIFORM;
+    descriptors[1].uniform = mMatrixUniformBuffer;
+
+    descriptors[2].location = 2;
+    descriptors[2].stage = STAGE_FRAGMENT;
+    descriptors[2].count = 1;
+    descriptors[2].type = DESCRIPTOR_TYPE_UNIFORM;
+    descriptors[2].uniform = mFragmentUniformBuffer;
 
     int size = 0;
     PipelineCreateInfo grassPipeline;
@@ -52,7 +71,7 @@ Grass::Grass(Graphics &graphics)
     grassPipeline.fragmentShaderSize = size;
     grassPipeline.attributeCount = 4;
     grassPipeline.pAttributes = attribs;
-    grassPipeline.descriptorCount = 1;
+    grassPipeline.descriptorCount = 3;
     grassPipeline.pDescriptors = descriptors;
 
     if (!PipelineCreate(mGraphics, &grassPipeline, &mGrassPipeline))
@@ -70,7 +89,9 @@ Grass::~Grass()
 
     if (mGrassMesh)
         MeshDestroy(mGraphics, mGrassMesh);
-    UniformBufferDestroy(mGraphics, mMatrixBuffer);
+    UniformBufferDestroy(mGraphics, mVertexUniformBuffer);
+    UniformBufferDestroy(mGraphics, mMatrixUniformBuffer);
+    UniformBufferDestroy(mGraphics, mFragmentUniformBuffer);
     PipelineDestroy(mGraphics, mGrassPipeline);
 }
 
@@ -96,7 +117,7 @@ void Grass::Generate(Model *pModel, int numBlades, int patchSize)
 
 void Grass::FinishGeneration()
 {
-    if (!mDoneGenerating || !mPatchColors || !mGrassBlades)
+    if (!mDoneGenerating || !mGrassBlades)
         return;
 
     GenerateMesh();
@@ -107,11 +128,18 @@ void Grass::Draw(Matrix projection, Matrix view, float height, float width, bool
     if (!mGrassMesh)
         return;
 
-    UniformMatrices matrices = { };
-    matrices.projection = projection;
-    matrices.view = view;
-    matrices.world = MatrixIdentity();
-    UniformBufferSetData(mMatrixBuffer, &matrices, sizeof(UniformMatrices));
+    mMatrixUniforms.projection = projection;
+    mMatrixUniforms.view = view;
+    mMatrixUniforms.world = MatrixIdentity();
+    UniformBufferSetData(mMatrixUniformBuffer, &mMatrixUniforms, sizeof(MatrixUniforms));
+
+    mVertexUniforms.width = width;
+    mVertexUniforms.height = height;
+    UniformBufferSetData(mVertexUniformBuffer, &mVertexUniforms, sizeof(VertexUniforms));
+
+    mFragmentUniforms.showPatches = showPatches;
+    UniformBufferSetData(mFragmentUniformBuffer, &mFragmentUniforms, sizeof(FragmentUniforms));
+
 
     PipelineBind(mGraphics, mGrassPipeline);
     MeshDraw(mGraphics, mGrassMesh);
@@ -175,23 +203,18 @@ void Grass::GeneratePatches()
 
     mNumPatches = mNumBlades / mPatchSize;
 
-    Vec4 *colors = new Vec4[mNumPatches];
-
     // Generate patch colors
-    for (int i = 0; i < mNumPatches; i++)
+    for (int i = 0; i < MAX_COLORS; i++)
     {
         float r = color(mGenerator);
         float g = color(mGenerator);
         float b = color(mGenerator);
 
-        colors[i].x = r;
-        colors[i].y = g;
-        colors[i].z = b;
-        colors[i].w = 1;
+        mFragmentUniforms.colors[i].x = r;
+        mFragmentUniforms.colors[i].y = g;
+        mFragmentUniforms.colors[i].z = b;
+        mFragmentUniforms.colors[i].w = 1;
     }
-
-    delete[] mPatchColors;
-    mPatchColors = colors;
 
     // Generate patches
     for (int i = 1; i <= mNumPatches; i++)

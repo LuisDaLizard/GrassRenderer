@@ -8,8 +8,9 @@ layout(location = 2) patch in vec3 tcV2;
 layout(location = 3) patch in vec3 tcBladeDir;
 layout(location = 4) patch in vec3 tcBladeUp;
 layout(location = 5) patch in vec3 tcBladeBitangent;
+layout(location = 6) patch in float tcWidth;
 
-layout(binding = 0) uniform UniformMatrices
+layout(binding = 1) uniform MatrixUniforms
 {
     mat4 uProj;
     mat4 uView;
@@ -26,12 +27,10 @@ vec3 interpolate(vec3 curvePoint1, vec3 curvePoint2, float t)
 
 void main()
 {
-    float width = 0.05f;
-
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
-    vec3 offset = (tcBladeDir * width) * 0.5;
+    vec3 offset = (tcBladeDir * tcWidth) * 0.5;
 
     vec3 v0 = vec3(gl_in[0].gl_Position) - offset;
     vec3 v1 = tcV1 - offset;

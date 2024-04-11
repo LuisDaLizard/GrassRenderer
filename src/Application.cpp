@@ -29,7 +29,7 @@ void Application::Run()
         UpdateCamera();
 
         mModel->Draw();
-        mGrass->Draw(mCameraMatrices.projection, mCameraMatrices.view, 0, 0, 0);
+        mGrass->Draw(mCameraMatrices.projection, mCameraMatrices.view, mBladeHeight, mBladeWidth, mShowPatches);
 
         DrawGui();
 
