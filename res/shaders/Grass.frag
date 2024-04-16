@@ -4,7 +4,7 @@
 
 layout(location = 0) out vec4 oColor;
 
-layout(binding = 2) uniform FragmentUniforms
+layout(binding = 1) uniform FragmentUniforms
 {
     vec4 uColors[MAX_COLORS];
     bool uShowPatches;

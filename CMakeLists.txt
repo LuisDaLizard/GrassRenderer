@@ -11,6 +11,7 @@ set(SOURCES
         src/Application.cpp
         src/Model.cpp
         src/Grass.cpp
+        src/Cluster.cpp
 
         libs/imgui/imgui.cpp
         libs/imgui/imgui_demo.cpp
@@ -26,7 +27,7 @@ set(INCLUDES
         libs/ShlibVK/include/
         libs/imgui/
         libs/imgui/backends/
-        libs/OBJ-Loader/Source/
+        libs/OBJ-Loader/
         ${Vulkan_INCLUDE_DIRS}
         )
 

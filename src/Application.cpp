@@ -23,13 +23,15 @@ void Application::Run()
 
         WindowPollEvents(mWindow);
 
+        mGrass->Update();
+
         GraphicsBeginRenderPass(mGraphics);
 
         UpdateGui();
         UpdateCamera();
 
         mModel->Draw();
-        mGrass->Draw(mCameraMatrices.projection, mCameraMatrices.view, mBladeHeight, mBladeWidth, mShowPatches);
+        mGrass->Draw(mCameraMatrices.projection, mCameraMatrices.view, mShowPatches);
 
         DrawGui();
 
@@ -92,7 +94,6 @@ void Application::InitGui()
         WriteError(1, "Failed to create and upload font textures");
 }
 
-
 void Application::InitUniforms()
 {
     mCameraMatrices.projection = MatrixTranspose(MatrixPerspective((float)mWindow->width / (float)mWindow->height, 45.0f, 0.01f, 1000.0f));
@@ -116,6 +117,10 @@ void Application::InitPipelines()
     matrices.stage = STAGE_VERTEX;
     matrices.uniform = mUniformMatrices;
 
+    InputBinding binding = { 0 };
+    binding.binding = 0;
+    binding.stride = sizeof(Vertex);
+
     Attribute position = { 0 };
     position.location = 0;
     position.offset = 0;
@@ -130,12 +135,13 @@ void Application::InitPipelines()
 
     int size = 0;
     PipelineCreateInfo modelPipeline = { };
-    modelPipeline.stride = sizeof(Vertex);
     modelPipeline.topology = TOPOLOGY_TRIANGLE_LIST;
     modelPipeline.pVertexShaderCode = (unsigned int *)FileReadBytes("shaders/bin/Model.vert", &size);
     modelPipeline.vertexShaderSize = size;
     modelPipeline.pFragmentShaderCode = (unsigned int *)FileReadBytes("shaders/bin/Model.frag", &size);
     modelPipeline.fragmentShaderSize = size;
+    modelPipeline.bindingCount = 1;
+    modelPipeline.pBindings = &binding;
     modelPipeline.attributeCount = 2;
     modelPipeline.pAttributes = attribs;
     modelPipeline.descriptorCount = 1;
@@ -176,26 +182,21 @@ void Application::UpdateGui()
             if (mPatchSize <= 0)
                 mPatchSize = 32;
 
-            ImGui::InputInt("Number of blades", &mNumBlades, mPatchSize, mPatchSize);
-
-            if (mNumBlades % mPatchSize != 0)
-                mNumBlades += mPatchSize - (mNumBlades % mPatchSize);
-            if (mNumBlades <= 0)
-                mNumBlades = 32;
+            ImGui::SliderFloat("Grass Density", &mGrassDensity, 0.01f, 1.0f);
+            ImGui::SliderFloat("Grass Width", &mBladeWidth, 0.01f, 1.0f);
+            ImGui::SliderFloat("Grass Height", &mBladeHeight, 0.01f, 2.0f);
 
             if (ImGui::Button("Generate"))
             {
-                mGrass->Generate(mModel, mNumBlades, mPatchSize);
+                mGrass->Generate(mModel, mGrassDensity, mPatchSize, mBladeWidth, mBladeHeight);
                 mGenerationTime = 0;
             }
             ImGui::SameLine();
-            ImGui::Text("%.4fs", mGenerationTime);
+            ImGui::Text("%.2fs", mGenerationTime);
         }
 
         if (ImGui::CollapsingHeader("Grass Variables"))
         {
-            ImGui::SliderFloat("Height", &mBladeHeight, 0.01f, 2.0f);
-            ImGui::SliderFloat("Width", &mBladeWidth, 0.01f, 1.0f);
             ImGui::Checkbox("Show Patches", &mShowPatches);
         }
 
@@ -217,7 +218,6 @@ void Application::DrawGui()
 {
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), (VkCommandBuffer)mGraphics->vkCommandBuffer);
 }
-
 
 void Application::UpdateCamera()
 {
@@ -257,10 +257,8 @@ void Application::UpdateCamera()
     UniformBufferSetData(mUniformMatrices, &mCameraMatrices, sizeof(UniformMatrices));
 }
 
-
 void Application::Cleanup()
 {
-
     delete mModel;
     delete mGrass;
 

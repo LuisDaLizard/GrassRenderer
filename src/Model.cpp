@@ -80,12 +80,24 @@ void Model::Draw() const
     MeshDraw(mGraphics, mMesh);
 }
 
+float Model::GetArea() const
+{
+    return mArea;
+}
+
 bool Model::GenerateMesh()
 {
+    mArea = 0;
+    for (int i = 0; i < mNumTriangles; i++)
+        mArea += Triangle::GetArea(mTriangles[i]);
+
+    unsigned int stride = sizeof(Vertex);
+
     MeshCreateInfo createInfo = {};
-    createInfo.stride = sizeof(Vertex);
     createInfo.vertexCount = mNumTriangles * 3;
-    createInfo.pVertices = (float *)mTriangles;
+    createInfo.bufferCount = 1;
+    createInfo.strides = &stride;
+    createInfo.ppData = (void **)&mTriangles;
 
     return MeshCreate(mGraphics, &createInfo, &mMesh);
 }

@@ -30,7 +30,7 @@ private:
     // Grass Related Variables
     Grass *mGrass;
     int mPatchSize = 32;
-    int mNumBlades = 0;
+    float mGrassDensity = 0.1f;
     float mBladeHeight = 0.5f;
     float mBladeWidth = 0.25f;
     bool mShowPatches = false;

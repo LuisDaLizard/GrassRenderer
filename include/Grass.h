@@ -12,32 +12,22 @@
 #include <mutex>
 #include <thread>
 
+#ifndef BLADES_PER_UNIT
+#define BLADES_PER_UNIT 100
+#endif
 #define MAX_COLORS 256
-
-struct GrassBlade
-{
-    Vec3 pos;
-    Vec3 norm;
-    Vec3 dir;
-
-    int patch;
-};
 
 class Grass
 {
 private:
-    struct GrassBladeVertex
+    struct GrassPatch
     {
-        Vec3 position;
-        Vec3 normal;
-        Vec3 direction;
-        float patch;
-    };
-
-    struct VertexUniforms
-    {
-        float width;
-        float height;
+        Vec4 *v0;
+        Vec4 *v1;
+        Vec4 *v2;
+        Vec4 *attribs;
+        int patch;
+        int numBlades;
     };
 
     struct MatrixUniforms
@@ -55,35 +45,42 @@ private:
 
 private:
     Graphics &mGraphics;
-    Mesh mGrassMesh = nullptr;
-    Pipeline mGrassPipeline = nullptr;
-    VertexUniforms mVertexUniforms;
-    MatrixUniforms mMatrixUniforms;
-    FragmentUniforms mFragmentUniforms;
-    UniformBuffer mVertexUniformBuffer = nullptr, mMatrixUniformBuffer = nullptr, mFragmentUniformBuffer = nullptr;
-    GrassBlade *mGrassBlades = nullptr;
-    int mNumBlades, mPatchSize, mNumPatches;
+    Mesh *mPatchMeshes = nullptr;
+    Pipeline mGrassPipeline = nullptr, mPhysicalPipeline = nullptr;
+    MatrixUniforms mMatrixUniforms = {};
+    FragmentUniforms mFragmentUniforms = {};
+    UniformBuffer mMatrixUniformBuffer = nullptr, mFragmentUniformBuffer = nullptr;
+    int mNumMeshes, mNumPatches, mPatchSize;
+    GrassPatch *mPatches = nullptr;
 
     MeshCreateInfo mGrassCreateInfo;
     std::default_random_engine mGenerator;
 
     std::thread mGenerationThread;
-    std::mutex mColorBufferMutex, mGrassMeshMutex;
+    std::mutex mDoneGeneratingLock, mNumPatchesLock;
     bool mDoneGenerating = true;
 
-    void GenerationThread(Model *pModel);
-    void GenerateBlades(Model *pModel);
-    void GeneratePatches();
-    void GenerateMesh();
+
 public:
-    Grass(Graphics &graphics);
+    explicit Grass(Graphics &graphics);
     ~Grass();
 
-    void Generate(Model *pModel, int numBlades, int patchSize);
+    void Generate(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight);
     void FinishGeneration();
-    void Draw(Matrix projection, Matrix view, float height, float width, bool showPatches);
+    void Update();
+    void Draw(Matrix projection, Matrix view, bool showPatches);
 
     bool DoneGenerating();
+
+private:
+    void InitPipelines();
+
+    void GenerationThread(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight);
+    Vec3 *GeneratePoints(Model *pModel, int bladeCount, Vec3 *pNormals);
+    GrassPatch *GeneratePatches(Vec3 *pPoints, Vec3 *pNormals, int *patchLabels, int patchCount, int patchSize, float width, float height);
+    Mesh *GenerateMeshes(GrassPatch *pPatches, int patchCount);
+    void GeneratePatchColors();
+    //void GenerateMesh();
 };
 
 #endif //GRASSRENDERER_GRASS_H

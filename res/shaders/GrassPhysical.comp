@@ -1,0 +1,39 @@
+#version 450
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) buffer grassV0
+{
+    vec4 bV0[]; // vec3 pos + float dir
+};
+
+layout(std430, binding = 1) buffer grassV1
+{
+    vec4 bV1[]; // vec3 pos + float width
+};
+
+layout(std430, binding = 2) buffer grassV2
+{
+    vec4 bV2[]; // vec3 pos + float height
+};
+
+layout(std430, binding = 3) buffer grassAttribs
+{
+    vec4 bAttribs[]; // vec3 up + float stiffness
+};
+
+void main()
+{
+    uint id = gl_GlobalInvocationID.x;
+
+    float dir = bV0[id].w;
+    float width = bV1[id].w;
+    float height = bV2[id].w;
+    vec3 up = bAttribs[id].xyz;
+    float stiffness = bAttribs[id].w;
+
+    vec3 pos = bV0[id].xyz;
+
+    bV1[id].xyz = pos + height * up * 0.5f;
+    bV2[id].xyz = pos + height * up;
+}
