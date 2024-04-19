@@ -22,6 +22,25 @@ layout(std430, binding = 3) buffer grassAttribs
     vec4 bAttribs[]; // vec3 up + float stiffness
 };
 
+layout(std430, binding = 4) buffer pressure
+{
+    vec4 bPressure[];
+};
+
+layout(binding = 5) uniform PatchUniforms
+{
+    vec4 uGravity;
+    vec4 uGravityPoint;
+    vec4 uWindDir;
+    float uPressureDecrease;
+    float uDeltaTime;
+    float uUseGravityPoint;
+} Uniforms;
+
+void ensureValidV2(inout vec3 v2, in vec3 v0, in vec3 bladeUp);
+vec3 calculateV1(in vec3 v0, in vec3 v2, in vec3 bladeUp, in float height);
+void makePersistentLength(in vec3 v0, inout vec3 v1, inout vec3 v2, in float height);
+
 void main()
 {
     uint id = gl_GlobalInvocationID.x;
@@ -29,11 +48,91 @@ void main()
     float dir = bV0[id].w;
     float width = bV1[id].w;
     float height = bV2[id].w;
-    vec3 up = bAttribs[id].xyz;
+    float iHeight = 1.0f / height;
     float stiffness = bAttribs[id].w;
+    float mdt = min(Uniforms.uDeltaTime, 1.0f);
 
-    vec3 pos = bV0[id].xyz;
+    vec3 bladeUp = bAttribs[id].xyz;
+    float sd = sin(dir);
+    float cd = cos(dir);
+    vec3 tmp = normalize(vec3(sd, sd + cd, cd));
+    vec3 bladeDir = normalize(cross(bladeUp, tmp));
+    vec3 bladeFront = normalize(cross(bladeUp, bladeDir));
 
-    bV1[id].xyz = pos + height * up * 0.5f;
-    bV2[id].xyz = pos + height * up;
+    vec3 v0 = bV0[id].xyz;
+    vec3 iv2 = v0 + height * bladeUp;
+
+    vec4 oldPressure = bPressure[id].xyzw;
+    float collisionStrength = max(oldPressure.w - Uniforms.uPressureDecrease * Uniforms.uDeltaTime, 0.0);
+    vec3 v2 = iv2 + oldPressure.xyz;
+
+    // Gravity
+    vec3 envGravity = (normalize(Uniforms.uGravityPoint.xyz) * Uniforms.uGravityPoint.w * (1 - Uniforms.uUseGravityPoint)) + (normalize(Uniforms.uGravityPoint.xyz - v2) * Uniforms.uGravityPoint.w * Uniforms.uUseGravityPoint);
+    float sign = step(-0.01f, dot(normalize(Uniforms.uGravity.xyz), bladeFront)) * 2.0f - 1.0f;
+    vec3 gravity = envGravity + (sign * bladeFront * (Uniforms.uGravity.w * (1.0f - Uniforms.uUseGravityPoint) + Uniforms.uGravityPoint.w * Uniforms.uUseGravityPoint) * 0.25f);
+
+    // Wind
+    float heightRatio = abs(dot(v2 - v0, bladeUp)) * iHeight;
+    float windStrength = Uniforms.uWindDir.w;
+    vec3 windDir = normalize(Uniforms.uWindDir.xyz);
+    float windPos = 1.0f - max((cos((v0.x + v0.z) * 0.75f + windStrength) + sin((v0.x + v0.y) * 0.5f + windStrength) + sin((v0.y + v0.z) * 0.25f + windStrength)) / 3.0f, 0.0f);
+    vec3 windVec = windDir * windPos;
+    float directionalAlignment = 1.0f - abs(dot(normalize(windVec), normalize(v2 - v0)));
+    vec3 wind = windVec * heightRatio * directionalAlignment;
+
+    // Recovery
+    vec3 recovery = (iv2 - v2) * stiffness * max(1.0 - collisionStrength, 0.1) * mdt;
+
+    // Apply forces
+    v2 += wind + recovery;
+
+    // Ensure V2 is valid
+    ensureValidV2(v2, v0, bladeUp);
+
+    // Calculate V1
+    vec3 v1 = calculateV1(v0, v2, bladeUp, height);
+
+    // Grass length correction
+    makePersistentLength(v0, v1, v2, height);
+
+    // Save v1 and v2 to buffers and update pressure buffer
+    vec3 pressure = v2 - iv2;
+    bV1[id].xyz = v1;
+    bV2[id].xyz = v2;
+    bPressure[id].xyzw = vec4(pressure, collisionStrength);
+}
+
+void ensureValidV2(inout vec3 v2, in vec3 v0, in vec3 bladeUp)
+{
+    vec3 v0V2 = v2 - v0;
+    v2 += bladeUp * -min(dot(bladeUp, v0V2),0.0f);
+}
+
+vec3 calculateV1(in vec3 v0, in vec3 v2, in vec3 bladeUp, in float height)
+{
+    vec3 v0V2 = v2 - v0;
+    float iHeight = 1.0 / height;
+    float l_proj = length(v0V2 - dot(v0V2, bladeUp) * bladeUp);
+    float v2ratio = l_proj * iHeight;
+    float fac = max(1.0f - v2ratio, 0.05f * max(v2ratio, 1.0f));
+    return v0 + bladeUp * height * fac;
+}
+
+void makePersistentLength(in vec3 v0, inout vec3 v1, inout vec3 v2, in float height)
+{
+    vec3 v01 = v1 - v0;
+    vec3 v12 = v2 - v1;
+    float lv01 = length(v01);
+    float lv12 = length(v12);
+
+    vec3 v0V2 = v2 - v0;
+    float L1 = lv01 + lv12;
+    float L0 = length(v0V2);
+    float L = (2.0f * L0 + L1) / 3.0f; //curve length approximation
+
+    float ldiff = height / L;
+    v01 = v01 * ldiff;
+    v12 = v12 * ldiff;
+    v1 = v0 + v01;
+    v2 = v1 + v12;
 }

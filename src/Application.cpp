@@ -23,7 +23,7 @@ void Application::Run()
 
         WindowPollEvents(mWindow);
 
-        mGrass->Update();
+        mGrass->Update((float)mDeltaTime, mGrassGravity);
 
         GraphicsBeginRenderPass(mGraphics);
 
@@ -155,6 +155,7 @@ void Application::InitModels()
 {
     mGrass = new Grass(mGraphics);
     mModel = new Model(mGraphics, mModelPipeline, Meshes::PlaneMesh, 2);
+    //mModel = new Model(mGraphics, mModelPipeline, "models/cube/cube.obj");
 }
 
 void Application::UpdateGui()
@@ -185,10 +186,11 @@ void Application::UpdateGui()
             ImGui::SliderFloat("Grass Density", &mGrassDensity, 0.01f, 1.0f);
             ImGui::SliderFloat("Grass Width", &mBladeWidth, 0.01f, 1.0f);
             ImGui::SliderFloat("Grass Height", &mBladeHeight, 0.01f, 2.0f);
+            ImGui::SliderFloat("Grass Stiffness", &mGrassStiffness, 0.01f, 100);
 
             if (ImGui::Button("Generate"))
             {
-                mGrass->Generate(mModel, mGrassDensity, mPatchSize, mBladeWidth, mBladeHeight);
+                mGrass->Generate(mModel, mGrassDensity, mPatchSize, mBladeWidth, mBladeHeight, mGrassStiffness);
                 mGenerationTime = 0;
             }
             ImGui::SameLine();
@@ -197,6 +199,7 @@ void Application::UpdateGui()
 
         if (ImGui::CollapsingHeader("Grass Variables"))
         {
+            ImGui::SliderFloat("Gravity", &mGrassGravity, 0.01f, 20.0f);
             ImGui::Checkbox("Show Patches", &mShowPatches);
         }
 

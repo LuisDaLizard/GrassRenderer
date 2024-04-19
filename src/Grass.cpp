@@ -21,12 +21,14 @@ Descriptor grassDescriptors[2] =
                 {1, 1, STAGE_FRAGMENT, DESCRIPTOR_TYPE_UNIFORM, nullptr},
         };
 
-Descriptor physicalDescriptors[4] =
+Descriptor physicalDescriptors[6] =
         {
                 {0, 1, STAGE_COMPUTE, DESCRIPTOR_TYPE_STORAGE, nullptr},
                 {1, 1, STAGE_COMPUTE, DESCRIPTOR_TYPE_STORAGE, nullptr},
                 {2, 1, STAGE_COMPUTE, DESCRIPTOR_TYPE_STORAGE, nullptr},
                 {3, 1, STAGE_COMPUTE, DESCRIPTOR_TYPE_STORAGE, nullptr},
+                {4, 1, STAGE_COMPUTE, DESCRIPTOR_TYPE_STORAGE, nullptr},
+                {5, 1, STAGE_COMPUTE, DESCRIPTOR_TYPE_UNIFORM, nullptr},
         };
 
 InputBinding bindings[4] =
@@ -51,17 +53,22 @@ Grass::~Grass()
     if (mPatchMeshes)
     {
         for (int i = 0; i < mNumMeshes; i++)
+        {
             MeshDestroy(mGraphics, mPatchMeshes[i]);
+            StorageBufferDestroy(mGraphics, mPatchPressureBuffers[i]);
+        }
     }
 
+    delete[] mPatchPressureBuffers;
     delete[] mPatchMeshes;
+    UniformBufferDestroy(mGraphics, mPhysicalUniformBuffer);
     UniformBufferDestroy(mGraphics, mMatrixUniformBuffer);
     UniformBufferDestroy(mGraphics, mFragmentUniformBuffer);
     PipelineDestroy(mGraphics, mGrassPipeline);
     PipelineDestroy(mGraphics, mPhysicalPipeline);
 }
 
-void Grass::Generate(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight)
+void Grass::Generate(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight, float grassStiffness)
 {
     if (!pModel)
         return;
@@ -72,7 +79,7 @@ void Grass::Generate(Model *pModel, float density, int patchSize, float bladeWid
     mDoneGenerating = false;
     if (mGenerationThread.joinable())
         mGenerationThread.join();
-    mGenerationThread = std::thread(&Grass::GenerationThread, this, pModel, density, patchSize, bladeWidth, bladeHeight);
+    mGenerationThread = std::thread(&Grass::GenerationThread, this, pModel, density, patchSize, bladeWidth, bladeHeight, grassStiffness);
 }
 
 void Grass::FinishGeneration()
@@ -83,22 +90,34 @@ void Grass::FinishGeneration()
     if (mPatchMeshes)
     {
         for (int i = 0; i < mNumMeshes; i++)
+        {
             MeshDestroy(mGraphics, mPatchMeshes[i]);
+            StorageBufferDestroy(mGraphics, mPatchPressureBuffers[i]);
+        }
 
+        delete[] mPatchPressureBuffers;
         delete[] mPatchMeshes;
     }
 
-    mPatchMeshes = GenerateMeshes(mPatches, mNumPatches);
+    mPatchMeshes = GenerateMeshes(mPatches, mNumPatches, &mPatchPressureBuffers);
     GeneratePatchColors();
     mNumMeshes = mNumPatches;
     mPatchSize = mPatches[0].numBlades;
     mPatches = nullptr;
 }
 
-void Grass::Update()
+void Grass::Update(float deltaTime, float gravity)
 {
     if (!mPatchMeshes)
         return;
+
+    mPhysicalUniforms.deltaTime = deltaTime;
+    mPhysicalUniforms.gravity = {0, -1, 0, gravity};
+    mPhysicalUniforms.gravityPoint = { 0, -1, 0, gravity};
+    mPhysicalUniforms.windDir = { -1, 0, 0, 0.0001f};
+    mPhysicalUniforms.useGravityPoint = 0;
+    mPhysicalUniforms.pressureDecrease = 1;
+    UniformBufferSetData(mPhysicalUniformBuffer, &mPhysicalUniforms, sizeof(PhysicalUniforms));
 
     for (int i = 0; i < mNumMeshes; i++)
     {
@@ -106,10 +125,12 @@ void Grass::Update()
         physicalDescriptors[1].storage = MeshGetStorageBuffer(mPatchMeshes[i], 1);
         physicalDescriptors[2].storage = MeshGetStorageBuffer(mPatchMeshes[i], 2);
         physicalDescriptors[3].storage = MeshGetStorageBuffer(mPatchMeshes[i], 3);
+        physicalDescriptors[4].storage = mPatchPressureBuffers[i];
         PipelineUpdateDescriptor(mGraphics, mPhysicalPipeline, physicalDescriptors[0]);
         PipelineUpdateDescriptor(mGraphics, mPhysicalPipeline, physicalDescriptors[1]);
         PipelineUpdateDescriptor(mGraphics, mPhysicalPipeline, physicalDescriptors[2]);
         PipelineUpdateDescriptor(mGraphics, mPhysicalPipeline, physicalDescriptors[3]);
+        PipelineUpdateDescriptor(mGraphics, mPhysicalPipeline, physicalDescriptors[4]);
 
         PipelineComputeDispatch(mGraphics, mPhysicalPipeline, mPatchSize / 32, 1, 1);
     }
@@ -176,17 +197,23 @@ void Grass::InitPipelines()
     if (!PipelineCreate(mGraphics, &grassPipeline, &mGrassPipeline))
         WriteError(1, "Failed to create grass pipeline");
 
+    bufferInfo.binding = 5;
+    bufferInfo.size = sizeof(PhysicalUniforms);
+    UniformBufferCreate(mGraphics, &bufferInfo, &mPhysicalUniformBuffer);
+
+    physicalDescriptors[5].uniform = mPhysicalUniformBuffer;
+
     PipelineComputeCreateInfo physicalPipeline;
     physicalPipeline.pComputeShaderCode = (unsigned int *)FileReadBytes("shaders/bin/GrassPhysical.comp", &size);
     physicalPipeline.computeShaderSize = size;
-    physicalPipeline.descriptorCount = 4;
+    physicalPipeline.descriptorCount = 6;
     physicalPipeline.pDescriptors = physicalDescriptors;
 
     if (!PipelineComputeCreate(mGraphics, &physicalPipeline, &mPhysicalPipeline))
         WriteError(1, "Failed to create physical compute pipeline");
 }
 
-void Grass::GenerationThread(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight)
+void Grass::GenerationThread(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight, float grassStiffness)
 {
     float area = pModel->GetArea();
     int temp = (int)(area * BLADES_PER_UNIT * density);
@@ -200,7 +227,7 @@ void Grass::GenerationThread(Model *pModel, float density, int patchSize, float 
     Cluster clustering(numPatches, patchSize, 30);
     int *labels = clustering.Fit(points, bladeCount);
 
-    GrassPatch *patches = GeneratePatches(points, normals, labels, numPatches, patchSize, bladeWidth, bladeHeight);
+    GrassPatch *patches = GeneratePatches(points, normals, labels, numPatches, patchSize, bladeWidth, bladeHeight, grassStiffness);
 
     if (mPatches)
     {
@@ -258,7 +285,7 @@ Vec3 *Grass::GeneratePoints(Model *pModel, int bladeCount, Vec3 *pNormals)
     return points;
 }
 
-Grass::GrassPatch *Grass::GeneratePatches(Vec3 *pPoints, Vec3 *pNormals, int *patchLabels, int patchCount, int patchSize, float width, float height)
+Grass::GrassPatch *Grass::GeneratePatches(Vec3 *pPoints, Vec3 *pNormals, int *patchLabels, int patchCount, int patchSize, float width, float height, float grassStiffness)
 {
     GrassPatch *patches = new GrassPatch[patchCount];
     std::uniform_real_distribution<float> rotationDistribution(0, 2 * M_PI);
@@ -283,14 +310,14 @@ Grass::GrassPatch *Grass::GeneratePatches(Vec3 *pPoints, Vec3 *pNormals, int *pa
         patches[patch].v0[count] = {pos.x, pos.y, pos.z, rotationDistribution(mGenerator)};
         patches[patch].v1[count] = {0, 0, 0, width};
         patches[patch].v2[count] = {0, 0, 0, height};
-        patches[patch].attribs[count] = {up.x, up.y, up.z, 0};
+        patches[patch].attribs[count] = {up.x, up.y, up.z, 1};
         patches[patch].numBlades += 1;
     }
 
     return patches;
 }
 
-Mesh *Grass::GenerateMeshes(GrassPatch *pPatches, int patchCount)
+Mesh *Grass::GenerateMeshes(GrassPatch *pPatches, int patchCount, StorageBuffer **ppPressureBuffers)
 {
     unsigned int strides[4] = {sizeof(Vec4), sizeof(Vec4), sizeof(Vec4), sizeof(Vec4)};
 
@@ -298,6 +325,7 @@ Mesh *Grass::GenerateMeshes(GrassPatch *pPatches, int patchCount)
     mGrassCreateInfo.strides = strides;
 
     Mesh *meshes = new Mesh[patchCount];
+    StorageBuffer *buffers = new StorageBuffer[patchCount];
 
     for (int i = 0; i < patchCount; i++)
     {
@@ -306,8 +334,21 @@ Mesh *Grass::GenerateMeshes(GrassPatch *pPatches, int patchCount)
 
         if (!MeshCreate(mGraphics, &mGrassCreateInfo, &meshes[i]))
             return nullptr;
+
+        StorageBufferCreateInfo bufferInfo = {};
+        bufferInfo.size = sizeof(Vec4) * pPatches[i].numBlades;
+
+        StorageBufferCreate(mGraphics, &bufferInfo, &buffers[i]);
+
+        Vec4 *emptyData = new Vec4[pPatches[i].numBlades];
+        memset(emptyData, 0, bufferInfo.size);
+
+        StorageBufferSetData(mGraphics, buffers[i], bufferInfo.size, emptyData);
+
+        delete[] emptyData;
     }
 
+    *ppPressureBuffers = buffers;
     return meshes;
 }
 

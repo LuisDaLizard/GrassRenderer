@@ -34,6 +34,8 @@ private:
     float mBladeHeight = 0.5f;
     float mBladeWidth = 0.25f;
     bool mShowPatches = false;
+    float mGrassGravity = 9.81f;
+    float mGrassStiffness = 1;
 
     // Camera Related Variables
     float mCameraSensitivity = 0.1f;

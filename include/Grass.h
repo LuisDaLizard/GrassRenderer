@@ -43,13 +43,25 @@ private:
         int showPatches;
     };
 
+    struct PhysicalUniforms
+    {
+        Vec4 gravity;
+        Vec4 gravityPoint;
+        Vec4 windDir;
+        float pressureDecrease;
+        float deltaTime;
+        float useGravityPoint;
+    };
+
 private:
     Graphics &mGraphics;
     Mesh *mPatchMeshes = nullptr;
+    StorageBuffer *mPatchPressureBuffers = nullptr;
     Pipeline mGrassPipeline = nullptr, mPhysicalPipeline = nullptr;
     MatrixUniforms mMatrixUniforms = {};
     FragmentUniforms mFragmentUniforms = {};
-    UniformBuffer mMatrixUniformBuffer = nullptr, mFragmentUniformBuffer = nullptr;
+    PhysicalUniforms mPhysicalUniforms = {};
+    UniformBuffer mMatrixUniformBuffer = nullptr, mFragmentUniformBuffer = nullptr, mPhysicalUniformBuffer = nullptr;
     int mNumMeshes, mNumPatches, mPatchSize;
     GrassPatch *mPatches = nullptr;
 
@@ -60,14 +72,13 @@ private:
     std::mutex mDoneGeneratingLock, mNumPatchesLock;
     bool mDoneGenerating = true;
 
-
 public:
     explicit Grass(Graphics &graphics);
     ~Grass();
 
-    void Generate(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight);
+    void Generate(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight, float grassStiffness);
     void FinishGeneration();
-    void Update();
+    void Update(float deltaTime, float gravity);
     void Draw(Matrix projection, Matrix view, bool showPatches);
 
     bool DoneGenerating();
@@ -75,12 +86,11 @@ public:
 private:
     void InitPipelines();
 
-    void GenerationThread(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight);
+    void GenerationThread(Model *pModel, float density, int patchSize, float bladeWidth, float bladeHeight, float grassStiffness);
     Vec3 *GeneratePoints(Model *pModel, int bladeCount, Vec3 *pNormals);
-    GrassPatch *GeneratePatches(Vec3 *pPoints, Vec3 *pNormals, int *patchLabels, int patchCount, int patchSize, float width, float height);
-    Mesh *GenerateMeshes(GrassPatch *pPatches, int patchCount);
+    GrassPatch *GeneratePatches(Vec3 *pPoints, Vec3 *pNormals, int *patchLabels, int patchCount, int patchSize, float width, float height, float grassStiffness);
+    Mesh *GenerateMeshes(GrassPatch *pPatches, int patchCount, StorageBuffer **ppPressureBuffers);
     void GeneratePatchColors();
-    //void GenerateMesh();
 };
 
 #endif //GRASSRENDERER_GRASS_H
