@@ -42,6 +42,7 @@ InputBinding bindings[4] =
 Grass::Grass(Graphics &graphics)
     : mGraphics(graphics), mGenerator(std::random_device{}()), mGrassCreateInfo({}), mNumMeshes(0), mNumPatches(0), mGenerationThread()
 {
+    mWind = new Wind(-1, 1);
     InitPipelines();
 }
 
@@ -111,12 +112,14 @@ void Grass::Update(float deltaTime, float gravity)
     if (!mPatchMeshes)
         return;
 
+    mWind->Update(deltaTime);
+
     mPhysicalUniforms.deltaTime = deltaTime;
     mPhysicalUniforms.gravity = {0, -1, 0, gravity};
     mPhysicalUniforms.gravityPoint = { 0, -1, 0, gravity};
-    mPhysicalUniforms.windDir = { -1, 0, 0, 0.0001f};
+    mPhysicalUniforms.windDir = mWind->GetWindData();
     mPhysicalUniforms.useGravityPoint = 0;
-    mPhysicalUniforms.pressureDecrease = 1;
+    mPhysicalUniforms.pressureDecrease = 0.1f;
     UniformBufferSetData(mPhysicalUniformBuffer, &mPhysicalUniforms, sizeof(PhysicalUniforms));
 
     for (int i = 0; i < mNumMeshes; i++)

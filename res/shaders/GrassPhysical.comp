@@ -68,23 +68,25 @@ void main()
 
     // Gravity
     vec3 envGravity = (normalize(Uniforms.uGravityPoint.xyz) * Uniforms.uGravityPoint.w * (1 - Uniforms.uUseGravityPoint)) + (normalize(Uniforms.uGravityPoint.xyz - v2) * Uniforms.uGravityPoint.w * Uniforms.uUseGravityPoint);
-    float sign = step(-0.01f, dot(normalize(Uniforms.uGravity.xyz), bladeFront)) * 2.0f - 1.0f;
+    float sign = step(-0.01f, dot(normalize(envGravity), bladeFront)) * 2.0f - 1.0f;
     vec3 gravity = envGravity + (sign * bladeFront * (Uniforms.uGravity.w * (1.0f - Uniforms.uUseGravityPoint) + Uniforms.uGravityPoint.w * Uniforms.uUseGravityPoint) * 0.25f);
+    gravity = gravity * height * stiffness * mdt;
+
 
     // Wind
     float heightRatio = abs(dot(v2 - v0, bladeUp)) * iHeight;
     float windStrength = Uniforms.uWindDir.w;
-    vec3 windDir = normalize(Uniforms.uWindDir.xyz);
+    vec3 windDir = Uniforms.uWindDir.xyz;
     float windPos = 1.0f - max((cos((v0.x + v0.z) * 0.75f + windStrength) + sin((v0.x + v0.y) * 0.5f + windStrength) + sin((v0.y + v0.z) * 0.25f + windStrength)) / 3.0f, 0.0f);
     vec3 windVec = windDir * windPos;
-    float directionalAlignment = 1.0f - abs(dot(normalize(windVec), normalize(v2 - v0)));
-    vec3 wind = windVec * heightRatio * directionalAlignment;
+    float directionalAlignment = 1.0f - abs(dot(normalize(windDir), normalize(v2 - v0)));
+    vec3 wind = Uniforms.uWindDir.xyz * heightRatio * directionalAlignment * windPos * windPos * stiffness * mdt;
 
     // Recovery
-    vec3 recovery = (iv2 - v2) * stiffness * max(1.0 - collisionStrength, 0.1) * mdt;
+    vec3 recovery = (iv2 - v2) * (1.0f - stiffness * 0.25f) * max(1.0 - collisionStrength, 0.1) * mdt;
 
     // Apply forces
-    v2 += wind + recovery;
+    v2 += gravity + wind + recovery;
 
     // Ensure V2 is valid
     ensureValidV2(v2, v0, bladeUp);

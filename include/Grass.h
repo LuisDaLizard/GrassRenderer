@@ -6,6 +6,7 @@
 #define GRASSRENDERER_GRASS_H
 
 #include "Model.h"
+#include "Wind.h"
 
 #include <ShlibVK/ShlibVK.h>
 #include <random>
@@ -71,6 +72,7 @@ private:
     std::thread mGenerationThread;
     std::mutex mDoneGeneratingLock, mNumPatchesLock;
     bool mDoneGenerating = true;
+    Wind *mWind;
 
 public:
     explicit Grass(Graphics &graphics);

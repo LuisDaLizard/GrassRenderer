@@ -12,6 +12,7 @@ set(SOURCES
         src/Model.cpp
         src/Grass.cpp
         src/Cluster.cpp
+        src/Wind.cpp
 
         libs/imgui/imgui.cpp
         libs/imgui/imgui_demo.cpp
