@@ -1,8 +1,6 @@
-//
-// Created by Luis on 4/14/2024.
-//
-
 #include "Cluster.h"
+#include <cfloat>
+
 
 Cluster::Cluster(int numClusters, int maxClusterSize, int maxIterations)
     : mNumClusters(numClusters), mMaxClusterSize(maxClusterSize), mMaxIterations(maxIterations), mCentroids(nullptr), mGenerator(std::random_device{}())
